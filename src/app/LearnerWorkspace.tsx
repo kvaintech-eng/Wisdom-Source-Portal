@@ -14,7 +14,12 @@ import schoolSignature from '../assets/wisdom-source-signature.png';
 import { formatOrdinalPosition } from '../domain/results';
 import { supabase } from '../lib/supabase';
 
-type StudentProfile = { id: string; serial: string; full_name: string };
+type StudentProfile = {
+  id: string;
+  serial: string;
+  full_name: string;
+  current_class: string | null;
+};
 type ReportSubject = {
   subject: string;
   obtained: number;
@@ -77,7 +82,8 @@ function parseStudents(value: unknown): StudentProfile[] {
   return value.filter((row): row is StudentProfile => isRecord(row)
     && typeof row.id === 'string'
     && typeof row.serial === 'string'
-    && typeof row.full_name === 'string');
+    && typeof row.full_name === 'string')
+    .map((student) => ({ ...student, current_class: null }));
 }
 
 function parseSnapshot(value: unknown): ReportSnapshot | null {
@@ -293,6 +299,7 @@ export default function LearnerWorkspace({
           calendarResult,
           timetablesResult,
           attendanceResult,
+          activeSessionResult,
         ] = await Promise.all([
           supabase.from('students').select('id,serial,full_name').order('full_name'),
           supabase
@@ -322,11 +329,63 @@ export default function LearnerWorkspace({
             .select('id,student_id,attendance_date,status')
             .order('attendance_date', { ascending: false })
             .limit(100),
+          supabase
+            .from('academic_sessions')
+            .select('id')
+            .eq('is_active', true)
+            .maybeSingle(),
         ]);
         if (cancelled) return;
         const issues: string[] = [];
+        const linkedStudents = studentsResult.error ? [] : parseStudents(studentsResult.data);
         if (studentsResult.error) issues.push('Linked student records could not be loaded.');
-        else setStudents(parseStudents(studentsResult.data));
+
+        if (activeSessionResult.error) {
+          issues.push('Current learner class information could not be loaded.');
+          setStudents(linkedStudents);
+        } else if (activeSessionResult.data && linkedStudents.length > 0) {
+          const enrollmentResult = await supabase
+            .from('enrollments')
+            .select('student_id,class_id')
+            .eq('session_id', activeSessionResult.data.id)
+            .eq('status', 'active')
+            .in('student_id', linkedStudents.map((student) => student.id));
+          if (cancelled) return;
+          if (enrollmentResult.error) {
+            issues.push('Current learner class information could not be loaded.');
+            setStudents(linkedStudents);
+          } else {
+            const enrollments = enrollmentResult.data.filter((row) =>
+              typeof row.student_id === 'string' && typeof row.class_id === 'string');
+            const classIds = [...new Set(enrollments.map((enrollment) => enrollment.class_id))];
+            const classesResult = classIds.length > 0
+              ? await supabase.from('classes').select('id,name').in('id', classIds)
+              : { data: [], error: null };
+            if (cancelled) return;
+            if (classesResult.error) {
+              issues.push('Current learner class information could not be loaded.');
+              setStudents(linkedStudents);
+            } else {
+              const classNames = new Map(
+                classesResult.data
+                  .filter((schoolClass) => typeof schoolClass.id === 'string' && typeof schoolClass.name === 'string')
+                  .map((schoolClass) => [schoolClass.id, schoolClass.name]),
+              );
+              const classByStudent = new Map(
+                enrollments.map((enrollment) => [
+                  enrollment.student_id,
+                  classNames.get(enrollment.class_id) ?? null,
+                ]),
+              );
+              setStudents(linkedStudents.map((student) => ({
+                ...student,
+                current_class: classByStudent.get(student.id) ?? null,
+              })));
+            }
+          }
+        } else {
+          setStudents(linkedStudents);
+        }
 
         if (reportsResult.error) issues.push('Published report cards could not be loaded.');
         else {
@@ -518,6 +577,37 @@ export default function LearnerWorkspace({
                   <button onClick={() => setActiveSection('notices')} type="button">View notices</button>
                 </article>
               </div>
+              <section className="family-panel family-profile-panel" aria-labelledby="school-profile-heading">
+                <div className="family-panel-heading">
+                  <div>
+                    <span className="eyebrow">School profile</span>
+                    <h2 id="school-profile-heading">
+                      {role === 'parent' ? 'Linked learner profiles' : 'Your school profile'}
+                    </h2>
+                  </div>
+                </div>
+                {students.length === 0 ? (
+                  <p className="empty-state">No learner profile is available to this account.</p>
+                ) : (
+                  <div className="family-profile-list">
+                    {students.map((student) => (
+                      <article className="family-profile-card" key={student.id}>
+                        {role === 'parent' && <h3>{student.full_name}</h3>}
+                        <dl>
+                          <div>
+                            <dt>Learner ID</dt>
+                            <dd>{student.serial}</dd>
+                          </div>
+                          <div>
+                            <dt>Current class</dt>
+                            <dd>{student.current_class ?? 'Not enrolled in the active session'}</dd>
+                          </div>
+                        </dl>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
               <section className="family-panel family-latest-panel" aria-labelledby="latest-school-info-heading">
                 <div className="family-panel-heading">
                   <div>
