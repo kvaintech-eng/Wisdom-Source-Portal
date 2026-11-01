@@ -260,6 +260,34 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
 .school-footer-field { grid-column: 1 / -1; }
 .school-settings-form > button, .school-settings-form > p { grid-column: 1 / -1; }
 .lifecycle-panel { margin-top: 18px; }
+.bulk-promotion-panel { margin-top: 18px; }
+.bulk-promotion-intro { margin: 0; padding: 14px 20px 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.family-profile-icon { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 9px; background: #fbf2f5; color: var(--maroon); }
+.bulk-promotion-controls { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(180px, 1fr); align-items: end; gap: 14px; padding: 16px 20px; }
+.bulk-promotion-controls > label { display: grid; gap: 7px; }
+.bulk-promotion-controls .field-label { margin: 0; }
+.bulk-promotion-source { display: grid; gap: 8px; min-height: 64px; align-content: center; padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; background: #fcfafb; }
+.bulk-promotion-source .field-label { margin: 0; }
+.bulk-promotion-source strong { color: var(--ink); font-size: 12px; }
+.bulk-promotion-summary { display: flex; flex-wrap: wrap; gap: 9px; padding: 0 20px 14px; }
+.bulk-promotion-summary > span { padding: 7px 10px; border: 1px solid #eee7e9; border-radius: 100px; background: #fffdfa; color: #665c63; font-size: 10px; }
+.bulk-promotion-summary strong { color: var(--maroon); }
+.bulk-promotion-table-wrap { max-height: 520px; }
+.bulk-promotion-table { min-width: 930px; }
+.bulk-promotion-table th, .bulk-promotion-table td { padding: 10px 12px; }
+.bulk-promotion-table td:first-child { min-width: 155px; }
+.bulk-promotion-table td:first-child strong, .bulk-promotion-table td:first-child small { display: block; }
+.bulk-promotion-table td:first-child small { margin-top: 4px; color: var(--muted); font-size: 9px; }
+.bulk-promotion-input { min-width: 145px; height: 37px; padding: 0 8px; font-size: 10px; }
+.bulk-promotion-table td:nth-child(5) .bulk-promotion-input { min-width: 205px; }
+.bulk-promotion-graduation { display: inline-flex; align-items: center; gap: 6px; color: #795b27; font-size: 10px; font-weight: 700; }
+.bulk-promotion-status { display: inline-flex; padding: 5px 8px; border-radius: 100px; font-size: 9px; font-weight: 750; white-space: nowrap; }
+.bulk-promotion-status-pending { background: #fff5e4; color: #8a6121; }
+.bulk-promotion-status-failed { background: #fff0ef; color: #9b3d38; }
+.bulk-promotion-status-recorded { background: #edf7ef; color: #2d6840; }
+.bulk-promotion-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 15px 20px; border-top: 1px solid var(--line); background: #fcfafb; }
+.bulk-promotion-footer p { max-width: 520px; margin: 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.bulk-promotion-submit { width: auto; min-width: 260px; margin: 0; }
 .lifecycle-forms .update-form h3 { margin-bottom: 2px; }
 .archive-student-button { justify-self: start; }
 .lifecycle-notice { margin: 14px 20px 0; }
@@ -615,6 +643,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
   .assessment-setup-list li span { text-align: left; }
   .parent-fields { grid-template-columns: 1fr; }
   .updates-forms { grid-template-columns: 1fr; }
+  .bulk-promotion-controls { grid-template-columns: 1fr; }
+  .bulk-promotion-footer { align-items: stretch; flex-direction: column; }
+  .bulk-promotion-submit { width: 100%; }
   .update-form + .update-form { border-top: 1px solid var(--line); border-left: 0; }
   .timetable-upload { grid-template-columns: 1fr; }
   .timetable-list li { align-items: flex-start; flex-direction: column; }

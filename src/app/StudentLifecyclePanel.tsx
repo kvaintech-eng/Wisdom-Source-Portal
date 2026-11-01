@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import BulkPromotionReview from './BulkPromotionReview';
 import { supabase } from '../lib/supabase';
 
 type StudentOption = { id: string; serial: string; full_name: string };
@@ -198,6 +199,8 @@ export default function StudentLifecyclePanel({
   }
 
   return (
+    <>
+    <BulkPromotionReview refreshKey={refreshKey} />
     <section className="family-panel lifecycle-panel" aria-labelledby="lifecycle-heading">
       <div className="family-panel-heading">
         <div>
@@ -333,5 +336,6 @@ export default function StudentLifecyclePanel({
       {error && <p className="form-notice lifecycle-notice" role="alert">{error}</p>}
       {message && <p className="success-notice lifecycle-notice" role="status">{message}</p>}
     </section>
+    </>
   );
 }
