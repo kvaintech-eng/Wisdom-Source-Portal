@@ -60,6 +60,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
 .password-wrap { position: relative; }
 .password-wrap .text-field { padding-right: 43px; }
 .visibility-button { position: absolute; top: 0; right: 0; display: grid; width: 42px; height: 45px; place-items: center; border: 0; background: transparent; color: #827b85; cursor: pointer; }
+.visibility-button:focus-visible { border-radius: 7px; outline: 2px solid var(--maroon); outline-offset: -3px; }
+.visibility-button:disabled { cursor: not-allowed; opacity: .5; }
 .sign-in-button { display: flex; width: 100%; height: 46px; align-items: center; justify-content: space-between; margin-top: 24px; padding: 0 15px; border: 0; border-radius: 8px; background: var(--maroon); color: #fff; cursor: pointer; font-size: 12px; font-weight: 700; transition: background .15s ease; }
 .sign-in-button:hover { background: var(--maroon-deep); }
 .sign-in-button:disabled { cursor: not-allowed; opacity: .62; }
@@ -130,6 +132,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
 .admin-quick-action-grid small { color: var(--muted); font-size: 10px; line-height: 1.5; }
 .admin-development-note { margin: 18px 0 0; padding: 12px 14px; border: 1px solid #f0d8b5; border-radius: 8px; background: #fff8ec; color: #715320; font-size: 10px; line-height: 1.65; }
 .attendance-date-toolbar { grid-template-columns: minmax(180px, 260px); }
+.attendance-date-help { margin: 0 0 10px; color: var(--muted); font-size: 11px; line-height: 1.6; }
 .admin-footer { display: flex; justify-content: space-between; gap: 12px; padding: 16px 38px 22px; color: #8b858e; font-size: 9px; }
 .admin-heading h1 { margin: 8px 0; font-size: clamp(27px, 4vw, 36px); letter-spacing: -1px; }
 .admin-heading p, .selection-note { color: var(--muted); font-size: 12px; line-height: 1.7; }
@@ -143,6 +146,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
 .attendance-card-header strong { font-size: 14px; }
 .attendance-card-header span, .attendance-count { color: var(--muted); font-size: 11px; }
 .attendance-count { white-space: nowrap; }
+.attendance-register-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; }
+.attendance-mark-remaining { display: inline-flex; min-height: 36px; align-items: center; justify-content: center; gap: 7px; padding: 0 11px; border: 1px solid #d6e8d9; border-radius: 7px; background: #f3faf4; color: #2d6840; cursor: pointer; font: inherit; font-size: 10px; font-weight: 700; }
+.attendance-mark-remaining:hover:not(:disabled) { border-color: #9dc5a5; background: #eaf5ec; }
+.attendance-mark-remaining:focus-visible { outline: 2px solid #2d6840; outline-offset: 2px; }
+.attendance-mark-remaining:disabled { cursor: not-allowed; opacity: .55; }
 .attendance-table-wrap { overflow-x: auto; }
 .attendance-table { width: 100%; border-collapse: collapse; text-align: left; }
 .attendance-table th, .attendance-table td { padding: 12px 20px; border-bottom: 1px solid #f0ecee; font-size: 12px; }

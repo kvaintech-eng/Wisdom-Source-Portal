@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { countScheduledSchoolDays } from '../../src/domain/attendance';
+import {
+  countScheduledSchoolDays,
+  markUnmarkedAttendancePresent,
+} from '../../src/domain/attendance';
+
+describe('markUnmarkedAttendancePresent', () => {
+  it('marks only unmarked learners present and preserves existing statuses', () => {
+    const savedAbsent = { student_id: 'a', attendance_status: 'absent' as const };
+    const savedPresent = { student_id: 'b', attendance_status: 'present' as const };
+    const unmarked = { student_id: 'c', attendance_status: null };
+
+    expect(markUnmarkedAttendancePresent([savedAbsent, savedPresent, unmarked])).toEqual([
+      savedAbsent,
+      savedPresent,
+      { student_id: 'c', attendance_status: 'present' },
+    ]);
+  });
+});
 
 describe('countScheduledSchoolDays', () => {
   it('subtracts a scheduled Monday holiday exactly once', () => {

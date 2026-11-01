@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ArrowRight, LockKeyhole, ShieldCheck, UsersRound } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, LockKeyhole, ShieldCheck, UsersRound } from 'lucide-react';
 import AdminWorkspace from './AdminWorkspace';
 import LearnerWorkspace from './LearnerWorkspace';
 import { isPortalAuthEnabled } from '../lib/auth-config';
@@ -43,7 +43,9 @@ function PasswordChangePanel({
   onSubmit: (password: string) => void;
 }) {
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [confirmation, setConfirmation] = useState('');
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [formNotice, setFormNotice] = useState('');
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -84,6 +86,7 @@ function PasswordChangePanel({
         </p>
         <form onSubmit={handleSubmit}>
           <label className="field-label" htmlFor="new-password">New password</label>
+          <div className="password-wrap">
           <input
             autoComplete="new-password"
             className="text-field"
@@ -92,12 +95,25 @@ function PasswordChangePanel({
             minLength={12}
             onChange={(event) => setPassword(event.target.value)}
             required
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             value={password}
           />
+          <button
+            aria-label={showPassword ? 'Hide new password' : 'Show new password'}
+            aria-pressed={showPassword}
+            className="visibility-button"
+            onClick={() => setShowPassword((current) => !current)}
+            type="button"
+          >
+            {showPassword
+              ? <EyeOff size={17} aria-hidden="true" />
+              : <Eye size={17} aria-hidden="true" />}
+          </button>
+          </div>
           <label className="field-label password-label" htmlFor="confirm-password">
-            Confirm new password
+          Confirm new password
           </label>
+          <div className="password-wrap">
           <input
             autoComplete="new-password"
             className="text-field"
@@ -106,9 +122,21 @@ function PasswordChangePanel({
             minLength={12}
             onChange={(event) => setConfirmation(event.target.value)}
             required
-            type="password"
+            type={showConfirmation ? 'text' : 'password'}
             value={confirmation}
           />
+          <button
+            aria-label={showConfirmation ? 'Hide password confirmation' : 'Show password confirmation'}
+            aria-pressed={showConfirmation}
+            className="visibility-button"
+            onClick={() => setShowConfirmation((current) => !current)}
+            type="button"
+          >
+            {showConfirmation
+              ? <EyeOff size={17} aria-hidden="true" />
+              : <Eye size={17} aria-hidden="true" />}
+          </button>
+          </div>
           <button className="sign-in-button" disabled={busy} type="submit">
             <span>{busy ? 'Updating password…' : 'Change password securely'}</span>
             <ArrowRight size={17} aria-hidden="true" />
@@ -125,6 +153,7 @@ function PasswordChangePanel({
 export default function App() {
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [accountRole, setAccountRole] = useState<AccountRole | null>(null);
@@ -264,6 +293,7 @@ export default function App() {
     } finally {
       setIsSigningIn(false);
       setPassword('');
+      setShowPassword(false);
     }
   }
 
@@ -279,6 +309,8 @@ export default function App() {
     }
     setAccountRole(null);
     setLoginId('');
+    setShowPassword(false);
+    setPassword('');
     setWorkspaceNotice('');
     setNotice('');
   }
@@ -309,6 +341,7 @@ export default function App() {
       setAccountRole(null);
       setLoginId('');
       setPassword('');
+      setShowPassword(false);
       setShowRecoveryForm(false);
       setRecoveryEmail('');
       setNotice('Your password has been changed. Sign in again with your new password.');
@@ -448,9 +481,21 @@ export default function App() {
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder={authEnabled ? 'Enter your password' : 'Available after secure setup'}
                 required
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
               />
+              <button
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                className="visibility-button"
+                disabled={!authEnabled || isSigningIn}
+                onClick={() => setShowPassword((current) => !current)}
+                type="button"
+              >
+                {showPassword
+                  ? <EyeOff size={17} aria-hidden="true" />
+                  : <Eye size={17} aria-hidden="true" />}
+              </button>
             </div>
 
             <button className="sign-in-button" disabled={!authEnabled || isSigningIn || isCheckingSession} type="submit">

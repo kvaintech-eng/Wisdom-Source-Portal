@@ -4,6 +4,16 @@ export interface CalendarClosure {
   readonly schoolOpen: boolean;
 }
 
+export type AttendanceStatus = 'present' | 'absent';
+
+export function markUnmarkedAttendancePresent<
+  T extends { readonly attendance_status: AttendanceStatus | null },
+>(rows: readonly T[]): T[] {
+  return rows.map((row) => row.attendance_status === null
+    ? { ...row, attendance_status: 'present' }
+    : row);
+}
+
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function parseDateOnly(value: string): Date {

@@ -4,6 +4,7 @@ import {
   BookOpen,
   CalendarCheck2,
   CalendarDays,
+  CheckCheck,
   ClipboardList,
   LayoutDashboard,
   LogOut,
@@ -24,6 +25,7 @@ import StudentBulkImportPanel from './StudentBulkImportPanel';
 import StudentDirectoryPanel from './StudentDirectoryPanel';
 import StudentLifecyclePanel from './StudentLifecyclePanel';
 import TimetablePanel from './TimetablePanel';
+import { markUnmarkedAttendancePresent, type AttendanceStatus } from '../domain/attendance';
 import { supabase } from '../lib/supabase';
 
 type AcademicSession = {
@@ -47,7 +49,6 @@ type AcademicTerm = {
   ends_on: string;
 };
 
-type AttendanceStatus = 'present' | 'absent';
 type AdminSection =
   | 'overview'
   | 'students'
@@ -380,12 +381,22 @@ export default function AdminWorkspace({
     && attendanceDate <= localDateString(new Date()));
   const allStudentsMarked = rows.length > 0
     && rows.every((row) => row.attendance_status !== null);
+  const unmarkedStudentCount = rows.filter((row) => row.attendance_status === null).length;
 
   function updateAttendance(studentId: string, status: AttendanceStatus) {
     setRows((currentRows) => currentRows.map((row) => row.student_id === studentId
       ? { ...row, attendance_status: status }
       : row));
     setStatusMessage('');
+    setSaveError('');
+  }
+
+  function markRemainingPresent() {
+    if (isLoadingRegister || !dateIsInTerm || unmarkedStudentCount === 0) return;
+    setRows(markUnmarkedAttendancePresent);
+    setStatusMessage(
+      `${unmarkedStudentCount} unmarked learner${unmarkedStudentCount === 1 ? '' : 's'} set to present. Review the register and save when ready.`,
+    );
     setSaveError('');
   }
 
@@ -589,6 +600,10 @@ export default function AdminWorkspace({
               </select>
             </label>
           </div>
+            <p className="attendance-date-help">
+              To enter past attendance, choose a date in the selected term. Record one school day at a time;
+              saved entries will load for review.
+            </p>
           {loadError && <p className="form-notice" role="alert">{loadError}</p>}
           {notice && <p className="form-notice" role="alert">{notice}</p>}
           {overviewError && <p className="form-notice" role="alert">{overviewError}</p>}
@@ -854,7 +869,21 @@ export default function AdminWorkspace({
               <strong>{classes.find((schoolClass) => schoolClass.id === classId)?.name ?? 'Class register'}</strong>
               <span>{selectedTerm?.name ?? 'Select a term'} · {attendanceDate}</span>
             </div>
-            <span className="attendance-count">{rows.length} learners</span>
+            <div className="attendance-register-actions">
+              <span className="attendance-count">{rows.length} learners</span>
+              {unmarkedStudentCount > 0 && (
+                <button
+                  aria-label={`Mark the ${unmarkedStudentCount} remaining unmarked learners present`}
+                  className="attendance-mark-remaining"
+                  disabled={!dateIsInTerm || isLoadingRegister || isSaving}
+                  onClick={markRemainingPresent}
+                  type="button"
+                >
+                  <CheckCheck size={16} aria-hidden="true" />
+                  <span>Mark remaining present ({unmarkedStudentCount})</span>
+                </button>
+              )}
+            </div>
           </div>
           {isLoadingRegister ? (
             <p className="empty-state">Loading the class register…</p>
