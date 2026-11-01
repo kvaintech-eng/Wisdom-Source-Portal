@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { ArrowRight, Eye, EyeOff, LockKeyhole, ShieldCheck, UsersRound } from 'lucide-react';
 import AdminWorkspace from './AdminWorkspace';
 import LearnerWorkspace from './LearnerWorkspace';
+import PublicHomePage from './PublicHomePage';
 import { isPortalAuthEnabled } from '../lib/auth-config';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
@@ -167,10 +168,16 @@ export default function App() {
   const [isRequestingRecovery, setIsRequestingRecovery] = useState(false);
   const [recoveryNotice, setRecoveryNotice] = useState('');
   const [showRecoveryForm, setShowRecoveryForm] = useState(false);
+  const [showPortalLogin, setShowPortalLogin] = useState(false);
   const authEnabled = isPortalAuthEnabled(
     isSupabaseConfigured,
     import.meta.env.VITE_AUTH_ENABLED,
   );
+
+  function openPortalLogin() {
+    setShowPortalLogin(true);
+    window.scrollTo(0, 0);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -402,16 +409,31 @@ export default function App() {
     );
   }
 
+  if (!showPortalLogin) {
+    return <PublicHomePage onPortalLogin={openPortalLogin} />;
+  }
+
   return (
     <main className="page-shell">
       <header className="brand-header">
-        <div className="brand-lockup" aria-label="Wisdom Source School">
+        <button
+          aria-label="Back to Wisdom Source School home"
+          className="login-home-link"
+          onClick={() => {
+            setShowPortalLogin(false);
+            setNotice('');
+            window.scrollTo(0, 0);
+          }}
+          type="button"
+        >
+          <div className="brand-lockup" aria-label="Wisdom Source School">
           <span className="brand-monogram" aria-hidden="true">WS</span>
           <span className="brand-name">
             <strong>Wisdom Source School</strong>
             <span>School Portal</span>
           </span>
-        </div>
+          </div>
+        </button>
         <span className="environment-badge">
           <span className="badge-dot" aria-hidden="true" />
           Secure setup in progress

@@ -396,7 +396,70 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
 .notice-list time { color: var(--muted); font-size: 10px; }
 .notice-list p { margin: 0; color: #615b64; font-size: 11px; line-height: 1.7; white-space: pre-wrap; }
 
+.login-home-link { padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; text-align: left; }
+.login-home-link:hover .brand-name strong { color: var(--maroon); }
+.public-home { overflow: hidden; background: #fffdfa; color: var(--ink); }
+.public-home-header { position: relative; z-index: 2; display: flex; width: min(1200px, calc(100% - 64px)); height: 88px; align-items: center; justify-content: space-between; margin: 0 auto; }
+.public-home-brand { display: inline-flex; min-width: 0; align-items: center; gap: 11px; color: inherit; text-decoration: none; }
+.public-home-brand img { width: 48px; height: 48px; object-fit: contain; }
+.public-home-brand > span { display: grid; gap: 4px; }
+.public-home-brand strong { font-size: 13px; letter-spacing: -.2px; }
+.public-home-brand small { color: var(--muted); font-size: 9px; letter-spacing: .3px; }
+.public-home-nav { display: flex; align-items: center; gap: 32px; }
+.public-home-nav > a { color: #605760; font-size: 11px; font-weight: 650; text-decoration: none; }
+.public-home-nav > a:hover, .public-home-secondary:hover { color: var(--maroon); }
+.public-home-login, .public-home-primary { display: inline-flex; min-height: 43px; align-items: center; justify-content: center; gap: 11px; padding: 0 17px; border: 0; border-radius: 7px; background: var(--maroon); color: #fff; cursor: pointer; font-size: 11px; font-weight: 700; transition: background .15s ease, transform .15s ease; }
+.public-home-login:hover, .public-home-primary:hover { transform: translateY(-1px); background: var(--maroon-deep); }
+.public-home-hero { position: relative; display: grid; width: min(1200px, calc(100% - 64px)); min-height: 560px; grid-template-columns: 1fr .9fr; align-items: center; margin: 0 auto; padding: 34px 0 66px; }
+.public-home-hero::before { position: absolute; z-index: 0; top: 0; right: -14vw; bottom: 0; width: 69%; border-radius: 48% 0 0 48%; background: #f7eff0; content: ''; }
+.public-home-hero-copy { position: relative; z-index: 1; max-width: 520px; padding: 20px 0 20px 28px; }
+.public-home-eyebrow { color: #965464; font-size: 9px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; }
+.public-home-hero h1 { max-width: 510px; margin: 18px 0 18px; color: #39232b; font-size: clamp(42px, 5.2vw, 66px); font-weight: 720; letter-spacing: -3.2px; line-height: 1.04; }
+.public-home-hero-copy > p { max-width: 430px; margin: 0; color: #70656c; font-size: 14px; line-height: 1.85; }
+.public-home-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; margin-top: 29px; }
+.public-home-primary { min-height: 49px; padding: 0 20px; }
+.public-home-secondary { display: inline-flex; align-items: center; gap: 7px; color: #615760; font-size: 10px; font-weight: 700; text-decoration: none; }
+.public-home-values { display: flex; align-items: center; gap: 11px; margin-top: 51px; color: #796d74; font-size: 9px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; }
+.public-home-values i { width: 4px; height: 4px; border-radius: 50%; background: #c28b98; }
+.public-home-art { position: relative; z-index: 1; display: grid; min-height: 410px; place-items: center; }
+.public-home-art-orbit { position: absolute; width: 360px; height: 360px; border: 1px solid #8e445421; border-radius: 50%; }
+.public-home-art-orbit-one { transform: scale(1.16); }
+.public-home-art-orbit-two { transform: scale(.9); }
+.public-home-art-sun { position: absolute; top: 10%; right: 15%; width: 62px; height: 62px; border-radius: 50%; background: #e7c98e; box-shadow: 0 0 0 12px #e7c98e20; }
+.public-home-art-card { position: relative; display: grid; width: min(285px, 72%); min-height: 325px; justify-items: center; align-content: center; padding: 30px 25px; border: 1px solid #ffffffbd; border-radius: 150px 150px 18px 18px; background: linear-gradient(160deg, #fff 7%, #fbf5f4 100%); box-shadow: 0 26px 70px #4c26331c; text-align: center; }
+.public-home-art-card img { width: 82px; height: 82px; margin-bottom: 17px; object-fit: contain; }
+.public-home-art-card > span { color: #975765; font-size: 8px; font-weight: 800; letter-spacing: 2px; }
+.public-home-art-card > strong { margin-top: 16px; color: #4a2d37; font-family: Georgia, 'Times New Roman', serif; font-size: 25px; font-weight: 500; line-height: 1.26; }
+.public-home-art-card > small { margin-top: 19px; color: #84747b; font-size: 8px; letter-spacing: .5px; }
+.public-home-art-spark { position: absolute; color: #a76b79; }
+.public-home-art-spark-one { top: 22%; left: 13%; font-size: 22px; }
+.public-home-art-spark-two { right: 10%; bottom: 21%; font-size: 15px; }
+.public-home-scroll { position: absolute; bottom: 25px; left: 50%; display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid #e8dadd; border-radius: 50%; color: var(--maroon); text-decoration: none; transform: translateX(-50%); }
+.public-home-scroll:hover { background: #f7eff0; }
+.public-home-community { padding: 78px 32px 86px; background: #fff; }
+.public-home-section-intro { max-width: 590px; margin: 0 auto 37px; text-align: center; }
+.public-home-section-intro h2, .public-home-portal-cta h2 { margin: 12px 0; color: #39232b; font-size: clamp(28px, 3.3vw, 39px); letter-spacing: -1.5px; line-height: 1.13; }
+.public-home-section-intro p, .public-home-portal-cta p { margin: 0; color: #756a71; font-size: 12px; line-height: 1.8; }
+.public-home-feature-grid { display: grid; width: min(1050px, 100%); grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0 auto; }
+.public-home-feature { min-height: 204px; padding: 25px 24px; border: 1px solid #eee7e9; border-radius: 11px; background: #fffdfa; box-shadow: 0 9px 28px #32152108; }
+.public-home-feature-icon { display: grid; width: 42px; height: 42px; place-items: center; margin-bottom: 22px; border-radius: 12px; background: #f5e9ec; color: var(--maroon); }
+.public-home-feature h3 { margin: 9px 0 8px; color: #3c3037; font-size: 15px; letter-spacing: -.25px; }
+.public-home-feature p { margin: 0; color: #786e75; font-size: 11px; line-height: 1.75; }
+.public-home-portal-cta { display: flex; width: min(1050px, calc(100% - 64px)); align-items: center; justify-content: space-between; gap: 28px; margin: 0 auto 74px; padding: 32px 38px; border-radius: 12px; background: #f7eff0; }
+.public-home-portal-cta h2 { margin: 9px 0; font-size: 26px; }
+.public-home-portal-cta p { font-size: 11px; }
+.public-home-portal-cta .public-home-primary { flex: 0 0 auto; }
+.public-home-footer { display: flex; width: min(1200px, calc(100% - 64px)); min-height: 92px; align-items: center; justify-content: space-between; gap: 22px; margin: 0 auto; border-top: 1px solid #eee7e9; }
+.public-home-footer > span { color: #82777e; font-size: 9px; }
+
 @media (max-width: 860px) {
+  .public-home-header, .public-home-hero, .public-home-footer { width: calc(100% - 48px); }
+  .public-home-hero { min-height: 500px; grid-template-columns: 1.08fr .92fr; }
+  .public-home-hero-copy { padding-left: 8px; }
+  .public-home-art-orbit { width: 300px; height: 300px; }
+  .public-home-art-card { min-height: 290px; }
+  .public-home-art-card > strong { font-size: 22px; }
+  .public-home-portal-cta { width: calc(100% - 48px); }
   .page-shell { padding: 0 24px; }
   .portal-grid { grid-template-columns: .88fr 1fr; }
   .welcome-panel { padding: 56px 35px; }
@@ -417,6 +480,42 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
   .report-list { padding: 14px; }
 }
 @media (max-width: 640px) {
+  .public-home-header { width: calc(100% - 36px); height: 72px; }
+  .public-home-brand { gap: 7px; }
+  .public-home-brand img { width: 39px; height: 39px; }
+  .public-home-brand strong { font-size: 10px; }
+  .public-home-brand small { font-size: 7px; }
+  .public-home-nav { gap: 0; }
+  .public-home-nav > a { display: none; }
+  .public-home-login { min-height: 38px; gap: 6px; padding: 0 10px; font-size: 9px; }
+  .public-home-hero { width: calc(100% - 36px); grid-template-columns: 1fr; gap: 4px; padding: 45px 0 59px; }
+  .public-home-hero::before { top: 43%; right: -18%; bottom: 0; width: 115%; border-radius: 48% 48% 0 0; }
+  .public-home-hero-copy { padding: 0 3px; }
+  .public-home-hero h1 { max-width: 460px; margin: 13px 0; font-size: clamp(39px, 11vw, 54px); letter-spacing: -2.5px; }
+  .public-home-hero-copy > p { max-width: 460px; font-size: 12px; }
+  .public-home-actions { gap: 15px; margin-top: 21px; }
+  .public-home-primary { min-height: 44px; padding: 0 13px; font-size: 10px; }
+  .public-home-secondary { font-size: 9px; }
+  .public-home-values { margin-top: 27px; font-size: 8px; }
+  .public-home-art { min-height: 310px; }
+  .public-home-art-orbit { width: 260px; height: 260px; }
+  .public-home-art-card { width: 230px; min-height: 260px; padding: 22px; }
+  .public-home-art-card img { width: 66px; height: 66px; margin-bottom: 12px; }
+  .public-home-art-card > strong { margin-top: 11px; font-size: 20px; }
+  .public-home-art-card > small { margin-top: 12px; }
+  .public-home-art-sun { top: 6%; right: 12%; width: 42px; height: 42px; }
+  .public-home-scroll { bottom: 14px; }
+  .public-home-community { padding: 57px 18px 62px; }
+  .public-home-section-intro { margin-bottom: 25px; }
+  .public-home-section-intro h2 { font-size: 29px; }
+  .public-home-section-intro p { font-size: 11px; }
+  .public-home-feature-grid { grid-template-columns: 1fr; gap: 10px; }
+  .public-home-feature { min-height: 0; padding: 19px; }
+  .public-home-feature-icon { margin-bottom: 15px; }
+  .public-home-portal-cta { width: calc(100% - 36px); flex-direction: column; align-items: flex-start; gap: 18px; margin-bottom: 42px; padding: 24px 20px; }
+  .public-home-portal-cta h2 { font-size: 23px; }
+  .public-home-footer { width: calc(100% - 36px); flex-direction: column; align-items: flex-start; justify-content: center; padding: 20px 0; }
+  .public-home-footer > span { font-size: 8px; }
   .page-shell { padding: 0 15px; }
   .brand-header { height: 76px; }
   .brand-monogram { width: 38px; height: 38px; }
