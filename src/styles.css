@@ -435,6 +435,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
 .report-card-footer { margin: 22px 0 0; padding-top: 11px; border-top: 1px solid var(--line); color: #615b64; font-size: 9px; line-height: 1.6; text-align: center; white-space: pre-wrap; }
 .testimonial-status-panel { max-width: 760px; }
 .testimonial-status-message { margin: 0; padding: 18px 20px; color: #615b64; font-size: 12px; line-height: 1.7; }
+.testimonial-admin-preview { margin-top: 20px; padding: 16px; border: 1px solid #e8e1e4; border-radius: 9px; background: #f8f6f7; }
+.testimonial-preview-notice { margin: 0 auto 12px; color: #6d5b63; font-size: 11px; line-height: 1.6; text-align: center; }
+.testimonial-preview-empty { margin: 0; padding: 12px; border: 1px dashed #d9c8ce; color: var(--muted); font-size: 10px; }
 .testimonial-document { width: min(900px, 100%); margin: 18px auto 0; padding: 28px 34px; border: 1px solid #e8e1e4; border-radius: 8px; background: #fff; box-shadow: 0 5px 18px #32152108; }
 .testimonial-document-heading { min-height: 112px; }
 .testimonial-school-address { max-width: 500px; color: var(--muted) !important; font-size: 10px !important; font-weight: 500 !important; letter-spacing: 0 !important; line-height: 1.5; text-transform: none !important; }

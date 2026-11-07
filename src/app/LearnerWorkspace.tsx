@@ -15,11 +15,10 @@ import {
 } from 'lucide-react';
 import schoolLogo from '../assets/wisdom-source-logo.png';
 import schoolSignature from '../assets/wisdom-source-signature.png';
-import testimonialSignature from '../assets/wisdom-source-testimonial-signature.png';
-import testimonialSeal from '../assets/wisdom-source-testimonial-seal.png';
 import { formatOrdinalPosition } from '../domain/results';
 import { parseStudentTestimonialStatus, type StudentTestimonialStatus } from '../domain/testimonial';
 import { supabase } from '../lib/supabase';
+import TestimonialDocumentView from './TestimonialDocumentView';
 
 type StudentProfile = {
   id: string;
@@ -79,11 +78,6 @@ type AttendanceRecord = {
   status: 'present' | 'absent';
 };
 type FamilySection = 'overview' | 'results' | 'attendance' | 'timetables' | 'calendar' | 'notices' | 'security' | 'testimonial';
-
-function formatSchoolDate(value: string): string {
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString();
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -917,85 +911,11 @@ export default function LearnerWorkspace({
                   </p>
                 </section>
               ) : (
-                <article
-                  className="testimonial-document"
-                  data-printing={printingTestimonial ? 'true' : undefined}
-                >
-                  <div className="report-card-toolbar">
-                    <span className="report-revision-label">
-                      Approved {new Date(testimonialStatus.document.issued_at).toLocaleDateString()}
-                    </span>
-                    <button
-                      className="sign-out-button report-print-button"
-                      onClick={() => setPrintingTestimonial(true)}
-                      type="button"
-                    >
-                      <Printer size={14} aria-hidden="true" />
-                      Print / Save PDF
-                    </button>
-                  </div>
-                  <header className="report-document-heading testimonial-document-heading">
-                    <img alt="Wisdom Source School logo" className="report-school-logo" src={schoolLogo} />
-                    <div className="report-school-title">
-                      <span className="eyebrow">Official school document</span>
-                      <h2>{testimonialStatus.document.school_name}</h2>
-                      {testimonialStatus.document.school_address && (
-                        <p className="testimonial-school-address">{testimonialStatus.document.school_address}</p>
-                      )}
-                      <p>Testimonial</p>
-                    </div>
-                  </header>
-                  <p className="testimonial-certification">
-                    This is to certify that <strong>{testimonialStatus.document.student_name}</strong> was a student
-                    of {testimonialStatus.document.school_name} and completed Senior Secondary 3 in the{' '}
-                    {testimonialStatus.document.graduation_session} academic session.
-                  </p>
-                  <dl className="testimonial-details">
-                    {testimonialStatus.document.former_school_name && (
-                      <div><dt>Previous school</dt><dd>{testimonialStatus.document.former_school_name}</dd></div>
-                    )}
-                    <div><dt>First enrolled</dt><dd>{formatSchoolDate(testimonialStatus.document.started_on)}</dd></div>
-                    <div><dt>Entry class</dt><dd>{testimonialStatus.document.started_class}</dd></div>
-                    <div><dt>Completed school</dt><dd>{formatSchoolDate(testimonialStatus.document.completed_on)}</dd></div>
-                    <div><dt>Graduating class</dt><dd>{testimonialStatus.document.completed_class}</dd></div>
-                    <div><dt>Graduation session</dt><dd>{testimonialStatus.document.graduation_session}</dd></div>
-                  </dl>
-                  <section className="testimonial-document-section">
-                    <h2>Subjects studied</h2>
-                    <ul className="testimonial-subject-list">
-                      {testimonialStatus.document.subjects.map((subject) => <li key={subject}>{subject}</li>)}
-                    </ul>
-                  </section>
-                  <dl className="testimonial-details testimonial-observations">
-                    <div><dt>Academic ability</dt><dd>{testimonialStatus.document.academic_ability || 'Not recorded'}</dd></div>
-                    <div><dt>Curriculum activities</dt><dd>{testimonialStatus.document.curriculum_activities || 'Not recorded'}</dd></div>
-                    <div><dt>Hobby</dt><dd>{testimonialStatus.document.hobby || 'Not recorded'}</dd></div>
-                    <div><dt>School office held</dt><dd>{testimonialStatus.document.school_office || 'Not recorded'}</dd></div>
-                    <div><dt>Club, art, or other activity</dt><dd>{testimonialStatus.document.club_art || 'Not recorded'}</dd></div>
-                    <div className="testimonial-remarks"><dt>Remarks</dt><dd>{testimonialStatus.document.remarks || 'Not recorded'}</dd></div>
-                  </dl>
-                  <div className="report-signature testimonial-signature">
-                    <img
-                      alt="Wisdom Source School certificate seal"
-                      className="testimonial-seal-image"
-                      src={testimonialSeal}
-                    />
-                    <div className="report-signature-line">
-                      <img
-                        alt="Wisdom Source School signature and stamp"
-                        className="report-signature-image"
-                        src={testimonialSignature}
-                      />
-                      <span>Authorised signature and school stamp</span>
-                      <strong>Principal / Proprietor</strong>
-                      <small>{testimonialStatus.document.school_name}</small>
-                    </div>
-                  </div>
-                  <footer className="testimonial-document-footer">
-                    <span>Approved by Wisdom Source School</span>
-                    <span>Issued {new Date(testimonialStatus.document.issued_at).toLocaleDateString()}</span>
-                  </footer>
-                </article>
+                <TestimonialDocumentView
+                  document={testimonialStatus.document}
+                  printing={printingTestimonial}
+                  onPrint={() => setPrintingTestimonial(true)}
+                />
               )}
             </section>
 

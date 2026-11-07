@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, FileBadge2, Save } from 'lucide-react';
+import { CheckCircle2, Eye, FileBadge2, Save } from 'lucide-react';
+import type { TestimonialDocument } from '../domain/testimonial';
 import { supabase } from '../lib/supabase';
+import TestimonialDocumentView from './TestimonialDocumentView';
 
 type Graduate = {
   student_id: string;
@@ -118,10 +120,34 @@ export default function TestimonialAdminPanel() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [previewError, setPreviewError] = useState('');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [schoolHeader, setSchoolHeader] = useState<{ school_name: string; school_address: string } | null>(null);
 
   const selectedGraduate = graduates.find((graduate) => graduate.student_id === selectedStudentId);
   const savedStatus = savedTestimonials.get(selectedStudentId)?.status;
   const subjectsText = useMemo(() => form.subjects.join('\n'), [form.subjects]);
+  const previewDocument: TestimonialDocument | null = selectedGraduate && schoolHeader
+    ? {
+      school_name: schoolHeader.school_name,
+      school_address: schoolHeader.school_address,
+      former_school_name: form.former_school_name,
+      student_name: selectedGraduate.full_name,
+      started_on: form.started_on,
+      started_class: form.started_class,
+      completed_on: form.completed_on,
+      completed_class: 'SS 3',
+      graduation_session: selectedGraduate.graduation_session,
+      subjects: form.subjects.map((subject) => subject.trim()).filter(Boolean),
+      academic_ability: form.academic_ability,
+      curriculum_activities: form.curriculum_activities,
+      hobby: form.hobby,
+      school_office: form.school_office,
+      club_art: form.club_art,
+      remarks: form.remarks,
+      issued_at: '',
+    }
+    : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -184,12 +210,47 @@ export default function TestimonialAdminPanel() {
     } : EMPTY_FORM);
     setError('');
     setMessage('');
+    setIsPreviewOpen(false);
+    setPreviewError('');
   }, [selectedStudentId, savedTestimonials]);
 
   function updateForm<K extends keyof TestimonialForm>(key: K, value: TestimonialForm[K]) {
     setForm((current) => ({ ...current, [key]: value }));
     setError('');
     setMessage('');
+  }
+
+  async function togglePreview() {
+    if (isPreviewOpen) {
+      setIsPreviewOpen(false);
+      return;
+    }
+    if (!supabase) {
+      setPreviewError('School database is not configured.');
+      return;
+    }
+    setPreviewError('');
+    try {
+      const { data, error: settingsError } = await supabase
+        .from('school_settings')
+        .select('school_name,contact_details')
+        .eq('id', true)
+        .maybeSingle();
+      if (settingsError || !isRecord(data)
+        || typeof data.school_name !== 'string'
+        || !isRecord(data.contact_details)) {
+        setPreviewError('School details could not be loaded for the preview. Refresh and try again.');
+        return;
+      }
+      const address = data.contact_details.address;
+      setSchoolHeader({
+        school_name: data.school_name,
+        school_address: typeof address === 'string' ? address : '',
+      });
+      setIsPreviewOpen(true);
+    } catch {
+      setPreviewError('School details could not be loaded for the preview. Check your connection and try again.');
+    }
   }
 
   async function saveTestimonial(approve: boolean) {
@@ -281,6 +342,7 @@ export default function TestimonialAdminPanel() {
             )}
           </div>
           {selectedGraduate && (
+            <>
             <form
               className="testimonial-admin-form"
               onSubmit={(event) => {
@@ -401,6 +463,14 @@ export default function TestimonialAdminPanel() {
                 </label>
               </div>
               <div className="testimonial-admin-actions">
+                <button
+                  className="sign-out-button"
+                  onClick={() => void togglePreview()}
+                  type="button"
+                >
+                  <Eye size={15} aria-hidden="true" />
+                  {isPreviewOpen ? 'Close preview' : 'Preview draft'}
+                </button>
                 <button className="sign-out-button" disabled={isSaving} type="submit">
                   <Save size={15} aria-hidden="true" />
                   {isSaving ? 'Saving draft…' : 'Save draft'}
@@ -417,6 +487,16 @@ export default function TestimonialAdminPanel() {
                 </button>
               </div>
             </form>
+            {previewError && <p className="form-notice" role="alert">{previewError}</p>}
+            {isPreviewOpen && previewDocument && (
+              <section className="testimonial-admin-preview" aria-label="Admin-only testimonial preview">
+                <p className="testimonial-preview-notice">
+                  Admin-only preview. This reflects the current form, is not saved, and is not visible to the student.
+                </p>
+                <TestimonialDocumentView document={previewDocument} preview />
+              </section>
+            )}
+            </>
           )}
         </>
       )}
