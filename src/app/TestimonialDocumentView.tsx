@@ -13,11 +13,13 @@ function formatSchoolDate(value: string): string {
 export default function TestimonialDocumentView({
   document,
   preview = false,
+  previewLabel,
   printing = false,
   onPrint,
 }: {
   document: TestimonialDocument;
   preview?: boolean;
+  previewLabel?: string;
   printing?: boolean;
   onPrint?: () => void;
 }) {
@@ -29,7 +31,7 @@ export default function TestimonialDocumentView({
       <div className="report-card-toolbar">
         <span className="report-revision-label">
           {preview
-            ? 'Admin preview · Not saved or published'
+            ? previewLabel ?? 'Admin preview · Not saved or published'
             : `Approved ${new Date(document.issued_at).toLocaleDateString()}`}
         </span>
         {!preview && onPrint && (

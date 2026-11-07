@@ -122,6 +122,7 @@ export default function TestimonialAdminPanel() {
   const [message, setMessage] = useState('');
   const [previewError, setPreviewError] = useState('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isSamplePreviewOpen, setIsSamplePreviewOpen] = useState(false);
   const [schoolHeader, setSchoolHeader] = useState<{ school_name: string; school_address: string } | null>(null);
 
   const selectedGraduate = graduates.find((graduate) => graduate.student_id === selectedStudentId);
@@ -145,6 +146,27 @@ export default function TestimonialAdminPanel() {
       school_office: form.school_office,
       club_art: form.club_art,
       remarks: form.remarks,
+      issued_at: '',
+    }
+    : null;
+  const samplePreviewDocument: TestimonialDocument | null = schoolHeader
+    ? {
+      school_name: schoolHeader.school_name,
+      school_address: schoolHeader.school_address,
+      former_school_name: 'Example Community School',
+      student_name: 'Sample Graduate (Fictional)',
+      started_on: '2021-09-06',
+      started_class: 'JSS 1',
+      completed_on: '2027-07-16',
+      completed_class: 'SS 3',
+      graduation_session: '2026/2027 (Example)',
+      subjects: ['English Language', 'Mathematics', 'Biology', 'Chemistry', 'Physics'],
+      academic_ability: 'Example remark',
+      curriculum_activities: 'Example activity',
+      hobby: 'Example hobby',
+      school_office: 'Example office',
+      club_art: 'Example club',
+      remarks: 'This is sample text for preview only.',
       issued_at: '',
     }
     : null;
@@ -253,6 +275,43 @@ export default function TestimonialAdminPanel() {
     }
   }
 
+  async function toggleSamplePreview() {
+    if (isSamplePreviewOpen) {
+      setIsSamplePreviewOpen(false);
+      return;
+    }
+    if (schoolHeader) {
+      setIsSamplePreviewOpen(true);
+      return;
+    }
+    if (!supabase) {
+      setPreviewError('School database is not configured.');
+      return;
+    }
+    setPreviewError('');
+    try {
+      const { data, error: settingsError } = await supabase
+        .from('school_settings')
+        .select('school_name,contact_details')
+        .eq('id', true)
+        .maybeSingle();
+      if (settingsError || !isRecord(data)
+        || typeof data.school_name !== 'string'
+        || !isRecord(data.contact_details)) {
+        setPreviewError('School details could not be loaded for the sample preview. Refresh and try again.');
+        return;
+      }
+      const address = data.contact_details.address;
+      setSchoolHeader({
+        school_name: data.school_name,
+        school_address: typeof address === 'string' ? address : '',
+      });
+      setIsSamplePreviewOpen(true);
+    } catch {
+      setPreviewError('School details could not be loaded for the sample preview. Check your connection and try again.');
+    }
+  }
+
   async function saveTestimonial(approve: boolean) {
     if (!supabase || !selectedGraduate || isSaving) return;
     const subjects = form.subjects.map((subject) => subject.trim()).filter(Boolean);
@@ -305,7 +364,17 @@ export default function TestimonialAdminPanel() {
           <span className="eyebrow">Graduation documents</span>
           <h2 id="testimonial-admin-heading">Prepare testimonials</h2>
         </div>
-        <span className="family-profile-icon"><FileBadge2 size={17} aria-hidden="true" /></span>
+        <div className="family-panel-actions">
+          <button
+            className="sign-out-button"
+            onClick={() => void toggleSamplePreview()}
+            type="button"
+          >
+            <Eye size={15} aria-hidden="true" />
+            {isSamplePreviewOpen ? 'Close sample' : 'Preview sample'}
+          </button>
+          <span className="family-profile-icon"><FileBadge2 size={17} aria-hidden="true" /></span>
+        </div>
       </div>
       <p className="testimonial-admin-guidance">
         Only learners with a confirmed SS 3 graduation appear here. Save a draft for review, then approve it
@@ -313,6 +382,19 @@ export default function TestimonialAdminPanel() {
       </p>
       {error && <p className="form-notice" role="alert">{error}</p>}
       {message && <p className="success-notice" role="status">{message}</p>}
+      {previewError && <p className="form-notice" role="alert">{previewError}</p>}
+      {isSamplePreviewOpen && samplePreviewDocument && (
+        <section className="testimonial-admin-preview" aria-label="Fictional sample testimonial preview">
+          <p className="testimonial-preview-notice">
+            Fictional example only. No graduate is selected; this preview is not saved, approved, or visible to students.
+          </p>
+          <TestimonialDocumentView
+            document={samplePreviewDocument}
+            preview
+            previewLabel="Fictional sample · Not saved or published"
+          />
+        </section>
+      )}
       {isLoading ? (
         <p className="empty-state">Loading eligible graduates…</p>
       ) : graduates.length === 0 ? (
