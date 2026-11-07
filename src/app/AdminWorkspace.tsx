@@ -26,6 +26,7 @@ import StudentDirectoryPanel from './StudentDirectoryPanel';
 import StudentLifecyclePanel from './StudentLifecyclePanel';
 import TimetablePanel from './TimetablePanel';
 import { markUnmarkedAttendancePresent, type AttendanceStatus } from '../domain/attendance';
+import { calculateAttendancePresentDays } from '../domain/attendanceBaseline';
 import { supabase } from '../lib/supabase';
 
 type AcademicSession = {
@@ -129,6 +130,13 @@ function localDateString(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function nextLocalDateString(dateString: string): string {
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + 1);
+  return localDateString(date);
+}
+
 export default function AdminWorkspace({
   onSignOut,
   notice,
@@ -143,6 +151,14 @@ export default function AdminWorkspace({
   const [classId, setClassId] = useState('');
   const [termId, setTermId] = useState('');
   const [attendanceDate, setAttendanceDate] = useState(() => localDateString(new Date()));
+  const [baselineCutoffDate, setBaselineCutoffDate] = useState('');
+  const [baselineValues, setBaselineValues] = useState<Record<string, string>>({});
+  const [baselineReason, setBaselineReason] = useState('Historical attendance totals entered from school records');
+  const [savedBaselineCutoffDate, setSavedBaselineCutoffDate] = useState('');
+  const [isLoadingBaseline, setIsLoadingBaseline] = useState(false);
+  const [isSavingBaseline, setIsSavingBaseline] = useState(false);
+  const [baselineError, setBaselineError] = useState('');
+  const [baselineMessage, setBaselineMessage] = useState('');
   const [rows, setRows] = useState<AttendanceRow[]>([]);
   const [correctionReason, setCorrectionReason] = useState('');
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);
@@ -374,14 +390,125 @@ export default function AdminWorkspace({
   }, [attendanceDate, classId, refreshKey, sessionId, termId]);
 
   const selectedTerm = terms.find((term) => term.id === termId);
+  const selectedTermStartsOn = selectedTerm?.starts_on;
+  const selectedTermEndsOn = selectedTerm?.ends_on;
   const selectedSession = sessions.find((session) => session.id === sessionId);
+  const learnerRosterKey = rows.map((row) => row.enrollment_id).join('|');
+
+  useEffect(() => {
+    setSavedBaselineCutoffDate('');
+    setBaselineValues({});
+    setBaselineError('');
+    setBaselineMessage('');
+  }, [classId, sessionId, termId]);
+
+  useEffect(() => {
+    if (!selectedTermStartsOn || !selectedTermEndsOn || !termId) return;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const cutoff = [localDateString(yesterday), selectedTermEndsOn].sort()[0];
+    setBaselineCutoffDate(cutoff < selectedTermStartsOn ? selectedTermStartsOn : cutoff);
+    setSavedBaselineCutoffDate('');
+    setBaselineValues({});
+    setBaselineError('');
+    setBaselineMessage('');
+  }, [termId, selectedTermStartsOn, selectedTermEndsOn]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadBaseline() {
+      const rosterIds = learnerRosterKey ? learnerRosterKey.split('|') : [];
+      if (!supabase || !classId || !sessionId || !termId || !baselineCutoffDate || rosterIds.length === 0) {
+        setBaselineValues({});
+        setIsLoadingBaseline(false);
+        return;
+      }
+      setIsLoadingBaseline(true);
+      setBaselineError('');
+      try {
+        const baselineResult = await supabase.from('attendance_baselines')
+          .select('enrollment_id,cutoff_date')
+          .eq('term_id', termId)
+          .in('enrollment_id', rosterIds);
+        if (cancelled) return;
+        if (baselineResult.error) {
+          setBaselineError('Saved historical attendance totals could not be loaded.');
+          return;
+        }
+        const existingBaselines = (baselineResult.data ?? []).filter((item) => (
+          typeof item.enrollment_id === 'string'
+          && typeof item.cutoff_date === 'string'
+        ));
+        const latestCutoff = existingBaselines.reduce(
+          (latest, item) => item.cutoff_date > latest ? item.cutoff_date : latest,
+          '',
+        );
+        setSavedBaselineCutoffDate(latestCutoff);
+        if (latestCutoff && baselineCutoffDate < latestCutoff) {
+          setBaselineCutoffDate(latestCutoff);
+          return;
+        }
+
+        const { data, error } = await supabase.rpc('class_attendance_baseline_register', {
+          p_class_id: classId,
+          p_session_id: sessionId,
+          p_term_id: termId,
+          p_cutoff_date: baselineCutoffDate,
+        });
+        if (cancelled) return;
+        if (error || !Array.isArray(data)) {
+          setBaselineError('Historical attendance totals could not be prepared for this class.');
+          return;
+        }
+        const values: Record<string, string> = {};
+        for (const item of data) {
+          if (!isRecord(item)
+            || typeof item.enrollment_id !== 'string'
+            || typeof item.baseline_days_present !== 'number'
+            || typeof item.present_since_baseline !== 'number') {
+            setBaselineError('Historical attendance totals returned an unexpected response.');
+            return;
+          }
+          values[item.enrollment_id] = String(calculateAttendancePresentDays(
+            item.baseline_days_present,
+            item.present_since_baseline,
+          ));
+        }
+        if (rosterIds.some((id) => values[id] === undefined)) {
+          setBaselineError('Historical attendance totals could not be matched to every active learner.');
+          return;
+        }
+        setBaselineValues(values);
+      } catch {
+        if (!cancelled) setBaselineError('Historical attendance totals could not be prepared. Check your connection and try again.');
+      } finally {
+        if (!cancelled) setIsLoadingBaseline(false);
+      }
+    }
+    void loadBaseline();
+    return () => {
+      cancelled = true;
+    };
+  }, [baselineCutoffDate, classId, learnerRosterKey, refreshKey, sessionId, termId]);
+
   const dateIsInTerm = Boolean(selectedTerm
     && attendanceDate >= selectedTerm.starts_on
     && attendanceDate <= selectedTerm.ends_on
     && attendanceDate <= localDateString(new Date()));
+  const attendanceDateIsAllowed = dateIsInTerm
+    && (!savedBaselineCutoffDate || attendanceDate > savedBaselineCutoffDate);
+  const dailyAttendanceCanBeSaved = attendanceDateIsAllowed && !isLoadingBaseline;
   const allStudentsMarked = rows.length > 0
     && rows.every((row) => row.attendance_status !== null);
   const unmarkedStudentCount = rows.filter((row) => row.attendance_status === null).length;
+  const baselineValuesAreValid = rows.length > 0 && rows.every((row) => {
+    const value = baselineValues[row.enrollment_id];
+    return value !== undefined && /^\d+$/.test(value) && Number.isSafeInteger(Number(value));
+  });
+  const baselineDateIsInTerm = Boolean(selectedTerm
+    && baselineCutoffDate >= selectedTerm.starts_on
+    && baselineCutoffDate <= selectedTerm.ends_on
+    && baselineCutoffDate <= localDateString(new Date()));
 
   function updateAttendance(studentId: string, status: AttendanceStatus) {
     setRows((currentRows) => currentRows.map((row) => row.student_id === studentId
@@ -392,7 +519,7 @@ export default function AdminWorkspace({
   }
 
   function markRemainingPresent() {
-    if (isLoadingRegister || !dateIsInTerm || unmarkedStudentCount === 0) return;
+    if (isLoadingRegister || !dailyAttendanceCanBeSaved || unmarkedStudentCount === 0) return;
     setRows(markUnmarkedAttendancePresent);
     setStatusMessage(
       `${unmarkedStudentCount} unmarked learner${unmarkedStudentCount === 1 ? '' : 's'} set to present. Review the register and save when ready.`,
@@ -401,7 +528,7 @@ export default function AdminWorkspace({
   }
 
   async function saveRegister() {
-    if (!supabase || !allStudentsMarked || !dateIsInTerm || isSaving) return;
+    if (!supabase || !allStudentsMarked || !dailyAttendanceCanBeSaved || isSaving) return;
     setIsSaving(true);
     setSaveError('');
     setStatusMessage('');
@@ -418,7 +545,9 @@ export default function AdminWorkspace({
         p_correction_reason: correctionReason.trim() || null,
       });
       if (error) {
-        setSaveError(error.message.toLowerCase().includes('reason')
+        setSaveError(error.message.toLowerCase().includes('baseline cutoff')
+          ? 'Daily attendance must be recorded after the saved historical attendance cutoff.'
+          : error.message.toLowerCase().includes('reason')
           ? 'Attendance has already been saved for one or more learners. Enter a correction reason, then save again.'
           : 'The register could not be saved. Verify the date and entries, then try again.');
       } else {
@@ -430,6 +559,57 @@ export default function AdminWorkspace({
       setSaveError('The register could not be saved. Check your connection and try again.');
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function saveAttendanceBaseline() {
+    if (!supabase || !baselineValuesAreValid || !baselineDateIsInTerm
+      || baselineReason.trim().length < 5 || isSavingBaseline || isLoadingBaseline) return;
+    const confirmed = window.confirm(
+      `Save each learner's days-present total through ${baselineCutoffDate}? Daily attendance for this class and term will then be recorded from the following day onward.`,
+    );
+    if (!confirmed) return;
+
+    setIsSavingBaseline(true);
+    setBaselineError('');
+    setBaselineMessage('');
+    try {
+      const { error } = await supabase.rpc('save_class_attendance_baseline', {
+        p_class_id: classId,
+        p_session_id: sessionId,
+        p_term_id: termId,
+        p_cutoff_date: baselineCutoffDate,
+        p_rows: rows.map((row) => ({
+          student_id: row.student_id,
+          days_present: Number(baselineValues[row.enrollment_id]),
+        })),
+        p_reason: baselineReason.trim(),
+      });
+      if (error) {
+        const detail = error.message.toLowerCase();
+        setBaselineError(detail.includes('scheduled school days')
+          ? 'A learner’s present-day total cannot exceed the scheduled school days through the cutoff date.'
+          : detail.includes('cutoff date cannot')
+            ? 'The cutoff cannot be moved earlier than the previous saved cutoff.'
+            : detail.includes('active learner exactly once')
+              ? 'The class list changed. Refresh the page, then review the learner totals again.'
+              : detail.includes('reason')
+                ? 'Enter a reason of at least five characters.'
+                : 'Historical attendance totals could not be saved. Verify the totals and try again.');
+        return;
+      }
+      setSavedBaselineCutoffDate(baselineCutoffDate);
+      setBaselineMessage(`Historical attendance totals saved for ${rows.length} learners.`);
+      const nextDate = nextLocalDateString(baselineCutoffDate);
+      if (selectedTerm && nextDate <= selectedTerm.ends_on
+        && nextDate <= localDateString(new Date())) {
+        setAttendanceDate(nextDate);
+      }
+      setRefreshKey((current) => current + 1);
+    } catch {
+      setBaselineError('Historical attendance totals could not be saved. Check your connection and try again.');
+    } finally {
+      setIsSavingBaseline(false);
     }
   }
 
@@ -842,11 +1022,13 @@ export default function AdminWorkspace({
             <span className="field-label">Attendance date</span>
             <input
               className="text-field"
-              disabled={!selectedTerm}
+              disabled={!selectedTerm || isLoadingBaseline}
               max={selectedTerm
                 ? [selectedTerm.ends_on, localDateString(new Date())].sort()[0]
                 : undefined}
-              min={selectedTerm?.starts_on}
+              min={savedBaselineCutoffDate
+                ? nextLocalDateString(savedBaselineCutoffDate)
+                : selectedTerm?.starts_on}
               onChange={(event) => setAttendanceDate(event.target.value)}
               type="date"
               value={attendanceDate}
@@ -863,6 +1045,116 @@ export default function AdminWorkspace({
             Choose a school date within the selected term and not later than today.
           </p>
         )}
+        {savedBaselineCutoffDate && attendanceDate <= savedBaselineCutoffDate && (
+          <p className="form-notice" role="status">
+            Historical totals already cover this class through {savedBaselineCutoffDate}. Daily attendance starts the following day.
+          </p>
+        )}
+        <div className="attendance-baseline-card">
+          <div className="attendance-card-header">
+            <div>
+              <strong>Enter historical attendance totals</strong>
+              <span>Set each learner’s days present through a cutoff date; no individual past days are created.</span>
+            </div>
+            <span className="attendance-count">{rows.length} learners</span>
+          </div>
+          <div className="attendance-baseline-guidance">
+            <p>
+              Enter each learner’s own present-day total, including any attendance already recorded through the cutoff.
+              After saving, the daily register starts on the next day and report cards add those later marks to this total.
+              Totals affect report cards published afterward; publish a new revision to update an existing report.
+            </p>
+            <label>
+              <span className="field-label">Count present through</span>
+              <input
+                className="text-field"
+                disabled={!selectedTerm || isSavingBaseline}
+                max={selectedTerm
+                  ? [selectedTerm.ends_on, localDateString(new Date())].sort()[0]
+                  : undefined}
+                min={savedBaselineCutoffDate || selectedTerm?.starts_on}
+                onChange={(event) => {
+                  setBaselineCutoffDate(event.target.value);
+                  setBaselineMessage('');
+                  setBaselineError('');
+                }}
+                type="date"
+                value={baselineCutoffDate}
+              />
+            </label>
+          </div>
+          {isLoadingBaseline ? (
+            <p className="empty-state">Loading historical attendance totals…</p>
+          ) : rows.length === 0 ? (
+            <p className="empty-state">Select a class, session, and term with active learners to enter historical totals.</p>
+          ) : (
+            <div className="attendance-table-wrap">
+              <table className="attendance-table attendance-baseline-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Learner</th>
+                    <th scope="col">Days present through cutoff</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.enrollment_id}>
+                      <td><strong>{row.full_name}</strong><small>{row.serial}</small></td>
+                      <td>
+                        <label className="visually-hidden" htmlFor={`baseline-${row.enrollment_id}`}>
+                          Days present through {baselineCutoffDate} for {row.full_name}
+                        </label>
+                        <input
+                          className="text-field attendance-baseline-input"
+                          disabled={isSavingBaseline || !baselineDateIsInTerm}
+                          id={`baseline-${row.enrollment_id}`}
+                          inputMode="numeric"
+                          min="0"
+                          onChange={(event) => {
+                            setBaselineValues((current) => ({
+                              ...current,
+                              [row.enrollment_id]: event.target.value,
+                            }));
+                            setBaselineMessage('');
+                            setBaselineError('');
+                          }}
+                          type="number"
+                          value={baselineValues[row.enrollment_id] ?? ''}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {rows.length > 0 && (
+            <div className="attendance-baseline-actions">
+              <label>
+                <span className="field-label">Reason for entering or correcting totals</span>
+                <input
+                  className="text-field"
+                  maxLength={500}
+                  minLength={5}
+                  onChange={(event) => setBaselineReason(event.target.value)}
+                  value={baselineReason}
+                />
+              </label>
+              <button
+                className="sign-in-button save-attendance-button"
+                disabled={!baselineValuesAreValid || !baselineDateIsInTerm
+                  || baselineReason.trim().length < 5
+                  || isLoadingBaseline || isSavingBaseline || isLoadingRegister}
+                onClick={() => void saveAttendanceBaseline()}
+                type="button"
+              >
+                <span>{isSavingBaseline ? 'Saving historical totals…' : 'Save historical totals'}</span>
+              </button>
+            </div>
+          )}
+          {baselineError && <p className="form-notice" role="alert">{baselineError}</p>}
+          {baselineMessage && <p className="success-notice" role="status">{baselineMessage}</p>}
+        </div>
         <div className="attendance-card">
           <div className="attendance-card-header">
             <div>
@@ -875,7 +1167,7 @@ export default function AdminWorkspace({
                 <button
                   aria-label={`Mark the ${unmarkedStudentCount} remaining unmarked learners present`}
                   className="attendance-mark-remaining"
-                  disabled={!dateIsInTerm || isLoadingRegister || isSaving}
+                  disabled={!dailyAttendanceCanBeSaved || isLoadingRegister || isSaving}
                   onClick={markRemainingPresent}
                   type="button"
                 >
@@ -941,7 +1233,7 @@ export default function AdminWorkspace({
               </label>
               <button
                 className="sign-in-button save-attendance-button"
-                disabled={!allStudentsMarked || !dateIsInTerm || isSaving || isLoadingRegister}
+                disabled={!allStudentsMarked || !dailyAttendanceCanBeSaved || isSaving || isLoadingRegister}
                 onClick={() => void saveRegister()}
                 type="button"
               >

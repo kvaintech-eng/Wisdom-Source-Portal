@@ -133,6 +133,17 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
 .admin-development-note { margin: 18px 0 0; padding: 12px 14px; border: 1px solid #f0d8b5; border-radius: 8px; background: #fff8ec; color: #715320; font-size: 10px; line-height: 1.65; }
 .attendance-date-toolbar { grid-template-columns: minmax(180px, 260px); }
 .attendance-date-help { margin: 0 0 10px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.attendance-baseline-card { overflow: hidden; margin: 16px 0; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 12px 35px #32152108; }
+.attendance-baseline-guidance { display: grid; grid-template-columns: minmax(0, 1fr) minmax(190px, 250px); align-items: end; gap: 18px; padding: 16px 20px; }
+.attendance-baseline-guidance p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.attendance-baseline-guidance label { display: grid; gap: 7px; }
+.attendance-baseline-table { max-width: 720px; }
+.attendance-baseline-table td:first-child strong, .attendance-baseline-table td:first-child small { display: block; }
+.attendance-baseline-table td:first-child small { margin-top: 4px; color: var(--muted); font-size: 9px; }
+.attendance-baseline-input { width: 140px; height: 38px; }
+.attendance-baseline-actions { display: flex; align-items: end; justify-content: space-between; gap: 18px; padding: 16px 20px; border-top: 1px solid var(--line); background: #fcfafb; }
+.attendance-baseline-actions > label { flex: 1; }
+.attendance-baseline-actions .save-attendance-button { min-width: 210px; }
 .admin-footer { display: flex; justify-content: space-between; gap: 12px; padding: 16px 38px 22px; color: #8b858e; font-size: 9px; }
 .admin-heading h1 { margin: 8px 0; font-size: clamp(27px, 4vw, 36px); letter-spacing: -1px; }
 .admin-heading p, .selection-note { color: var(--muted); font-size: 12px; line-height: 1.7; }
@@ -623,6 +634,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
   .report-card-toolbar .sign-out-button { flex: 0 0 auto; }
   .family-footer { flex-direction: column; padding: 0 15px 18px; }
   .family-columns { grid-template-columns: 1fr; }
+  .attendance-baseline-guidance { grid-template-columns: 1fr; }
+  .attendance-baseline-actions { align-items: stretch; flex-direction: column; }
+  .attendance-baseline-actions .save-attendance-button { width: 100%; }
   .attendance-toolbar { grid-template-columns: 1fr; }
   .attendance-actions { align-items: stretch; flex-direction: column; }
   .save-attendance-button { width: 100%; }
