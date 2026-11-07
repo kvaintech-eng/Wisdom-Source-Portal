@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import {
   Bell,
   CalendarDays,
   CalendarCheck2,
   ClipboardList,
+  Eye,
+  EyeOff,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Printer,
@@ -71,7 +74,7 @@ type AttendanceRecord = {
   attendance_date: string;
   status: 'present' | 'absent';
 };
-type FamilySection = 'overview' | 'results' | 'attendance' | 'timetables' | 'calendar' | 'notices';
+type FamilySection = 'overview' | 'results' | 'attendance' | 'timetables' | 'calendar' | 'notices' | 'security';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -260,10 +263,12 @@ function parseAttendance(value: unknown): AttendanceRecord[] | null {
 export default function LearnerWorkspace({
   role,
   onSignOut,
+  onChangePassword,
   notice,
 }: {
   role: 'student' | 'parent';
   onSignOut: () => void;
+  onChangePassword: (password: string) => Promise<'changed' | 'failed' | 'signout-failed'>;
   notice: string;
 }) {
   const [students, setStudents] = useState<StudentProfile[]>([]);
@@ -280,6 +285,13 @@ export default function LearnerWorkspace({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordChangeError, setPasswordChangeError] = useState('');
+  const [passwordChangeMessage, setPasswordChangeMessage] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -467,7 +479,38 @@ export default function LearnerWorkspace({
     { id: 'timetables', label: 'Class timetable', icon: TableProperties },
     { id: 'calendar', label: 'School calendar', icon: CalendarDays },
     { id: 'notices', label: 'School notices', icon: Bell },
+    { id: 'security', label: 'Password & security', icon: KeyRound },
   ];
+
+  async function submitPasswordChange(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordChangeError('');
+    setPasswordChangeMessage('');
+    if (newPassword !== confirmPassword) {
+      setPasswordChangeError('The passwords do not match.');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const changed = await onChangePassword(newPassword);
+      if (changed === 'failed') {
+        setPasswordChangeError('Your password could not be changed. Please try again or contact the school.');
+        return;
+      }
+      if (changed === 'signout-failed') {
+        setPasswordChangeError('Your password was updated, but this session could not be cleared. Close this browser and contact the school.');
+        return;
+      }
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordChangeMessage('Your password has been changed. Sign in again with your new password.');
+    } catch {
+      setPasswordChangeError('Your password could not be changed. Please try again or contact the school.');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  }
 
   async function openTimetable(document: TimetableDocument) {
     if (!supabase || openingTimetableId) return;
@@ -961,6 +1004,93 @@ export default function LearnerWorkspace({
                     ))}
                   </ul>
                 )}
+              </section>
+            </section>
+
+            <section className="family-section" hidden={activeSection !== 'security'}>
+              <div className="admin-heading">
+                <span className="eyebrow">Account security</span>
+                <h1>Password & security</h1>
+                <p>Change your password while signed in. Your password is private to your account.</p>
+              </div>
+              <section className="family-panel password-settings-panel" aria-labelledby="password-settings-heading">
+                <div className="family-panel-heading">
+                  <div>
+                    <span className="eyebrow">Your account</span>
+                    <h2 id="password-settings-heading">Change your password</h2>
+                  </div>
+                  <span className="family-profile-icon"><KeyRound size={17} aria-hidden="true" /></span>
+                </div>
+                <p className="password-settings-guidance">
+                  Choose a password of at least 12 characters that you do not share with anyone.
+                  After it changes, you will be signed out and must sign in again.
+                </p>
+                <form className="password-settings-form" onSubmit={(event) => void submitPasswordChange(event)}>
+                  <label className="password-settings-field" htmlFor="account-new-password">
+                    <span className="field-label">New password</span>
+                    <span className="password-wrap">
+                      <input
+                        autoComplete="new-password"
+                        className="text-field"
+                        id="account-new-password"
+                        maxLength={128}
+                        minLength={12}
+                        onChange={(event) => setNewPassword(event.target.value)}
+                        required
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={newPassword}
+                      />
+                      <button
+                        aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                        aria-pressed={showNewPassword}
+                        className="visibility-button"
+                        onClick={() => setShowNewPassword((current) => !current)}
+                        type="button"
+                      >
+                        {showNewPassword
+                          ? <EyeOff size={17} aria-hidden="true" />
+                          : <Eye size={17} aria-hidden="true" />}
+                      </button>
+                    </span>
+                  </label>
+                  <label className="password-settings-field" htmlFor="account-confirm-password">
+                    <span className="field-label">Confirm new password</span>
+                    <span className="password-wrap">
+                      <input
+                        autoComplete="new-password"
+                        className="text-field"
+                        id="account-confirm-password"
+                        maxLength={128}
+                        minLength={12}
+                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        required
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                      />
+                      <button
+                        aria-label={showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'}
+                        aria-pressed={showConfirmPassword}
+                        className="visibility-button"
+                        onClick={() => setShowConfirmPassword((current) => !current)}
+                        type="button"
+                      >
+                        {showConfirmPassword
+                          ? <EyeOff size={17} aria-hidden="true" />
+                          : <Eye size={17} aria-hidden="true" />}
+                      </button>
+                    </span>
+                  </label>
+                  <button
+                    className="sign-in-button password-settings-submit"
+                    disabled={isChangingPassword}
+                    type="submit"
+                  >
+                    <span>{isChangingPassword ? 'Changing password…' : 'Change password'}</span>
+                    <KeyRound size={16} aria-hidden="true" />
+                  </button>
+                  {passwordChangeError && <p className="form-notice" role="alert">{passwordChangeError}</p>}
+                  {passwordChangeMessage && <p className="success-notice" role="status">{passwordChangeMessage}</p>}
+                </form>
               </section>
             </section>
           </>

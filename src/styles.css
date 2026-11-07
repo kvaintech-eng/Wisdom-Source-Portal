@@ -373,6 +373,13 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
 .family-overview-card > button { width: fit-content; padding: 0; border: 0; background: transparent; color: var(--maroon); cursor: pointer; font-size: 10px; font-weight: 700; text-align: left; }
 .family-overview-card > button:hover { text-decoration: underline; }
 .family-latest-panel { margin-top: 20px; }
+.password-settings-panel { margin-top: 20px; }
+.password-settings-guidance { margin: 0; padding: 14px 20px 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.password-settings-form { display: grid; max-width: 760px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: 16px; padding: 18px 20px 20px; }
+.password-settings-field { display: grid; min-width: 0; gap: 7px; }
+.password-settings-field .field-label { margin: 0; }
+.password-settings-submit { grid-column: 1 / -1; width: auto; max-width: 260px; margin: 0; }
+.password-settings-form > .form-notice, .password-settings-form > .success-notice { grid-column: 1 / -1; margin: 0; padding: 10px 12px; border-radius: 7px; }
 .family-profile-panel { margin-top: 20px; }
 .family-profile-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; padding: 16px 20px; }
 .family-profile-card { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
@@ -634,6 +641,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
   .report-card-toolbar .sign-out-button { flex: 0 0 auto; }
   .family-footer { flex-direction: column; padding: 0 15px 18px; }
   .family-columns { grid-template-columns: 1fr; }
+  .password-settings-form { grid-template-columns: 1fr; }
+  .password-settings-submit { grid-column: 1; width: 100%; max-width: none; }
   .attendance-baseline-guidance { grid-template-columns: 1fr; }
   .attendance-baseline-actions { align-items: stretch; flex-direction: column; }
   .attendance-baseline-actions .save-attendance-button { width: 100%; }

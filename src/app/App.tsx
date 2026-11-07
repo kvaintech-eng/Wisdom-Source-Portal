@@ -322,26 +322,32 @@ export default function App() {
     setNotice('');
   }
 
-  async function handlePasswordChange(newPassword: string) {
+  async function handlePasswordChange(newPassword: string): Promise<'changed' | 'failed' | 'signout-failed'> {
     if (!supabase) {
       setPasswordChangeNotice('School database is not configured.');
-      return;
+      setWorkspaceNotice('School database is not configured.');
+      return 'failed';
     }
     setIsChangingPassword(true);
     setPasswordChangeNotice('');
+    setWorkspaceNotice('');
     try {
       const { error } = await supabase.functions.invoke('change-password', {
         body: { newPassword },
       });
       if (error) {
-        setPasswordChangeNotice('Your password could not be changed. Please try again or contact the school.');
-        return;
+        const message = 'Your password could not be changed. Please try again or contact the school.';
+        setPasswordChangeNotice(message);
+        setWorkspaceNotice(message);
+        return 'failed';
       }
 
       const { error: signOutError } = await supabase.auth.signOut();
       if (signOutError) {
-        setPasswordChangeNotice('Your password was updated, but this session could not be cleared. Close this browser and contact the school.');
-        return;
+        const message = 'Your password was updated, but this session could not be cleared. Close this browser and contact the school.';
+        setPasswordChangeNotice(message);
+        setWorkspaceNotice(message);
+        return 'signout-failed';
       }
       setRequiresPasswordChange(false);
       setIsPasswordRecovery(false);
@@ -352,8 +358,13 @@ export default function App() {
       setShowRecoveryForm(false);
       setRecoveryEmail('');
       setNotice('Your password has been changed. Sign in again with your new password.');
+      setWorkspaceNotice('');
+      return 'changed';
     } catch {
-      setPasswordChangeNotice('Your password could not be changed. Please try again or contact the school.');
+      const message = 'Your password could not be changed. Please try again or contact the school.';
+      setPasswordChangeNotice(message);
+      setWorkspaceNotice(message);
+      return 'failed';
     } finally {
       setIsChangingPassword(false);
     }
@@ -404,6 +415,7 @@ export default function App() {
       <LearnerWorkspace
         notice={workspaceNotice}
         onSignOut={() => void handleSignOut()}
+        onChangePassword={handlePasswordChange}
         role={accountRole}
       />
     );
