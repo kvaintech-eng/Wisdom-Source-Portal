@@ -433,6 +433,26 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
 .report-signature-line strong { font-size: 11px; }
 .report-signature-line small { color: var(--muted); font-size: 9px; }
 .report-card-footer { margin: 22px 0 0; padding-top: 11px; border-top: 1px solid var(--line); color: #615b64; font-size: 9px; line-height: 1.6; text-align: center; white-space: pre-wrap; }
+.testimonial-status-panel { max-width: 760px; }
+.testimonial-status-message { margin: 0; padding: 18px 20px; color: #615b64; font-size: 12px; line-height: 1.7; }
+.testimonial-document { width: min(900px, 100%); margin: 18px auto 0; padding: 28px 34px; border: 1px solid #e8e1e4; border-radius: 8px; background: #fff; box-shadow: 0 5px 18px #32152108; }
+.testimonial-document-heading { min-height: 112px; }
+.testimonial-school-address { max-width: 500px; color: var(--muted) !important; font-size: 10px !important; font-weight: 500 !important; letter-spacing: 0 !important; line-height: 1.5; text-transform: none !important; }
+.testimonial-certification { margin: 28px 6px 20px; color: #41383e; font-size: 13px; line-height: 1.9; text-align: justify; }
+.testimonial-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; border-top: 1px solid #e7e1e4; border-left: 1px solid #e7e1e4; }
+.testimonial-details > div { display: grid; min-width: 0; gap: 6px; padding: 11px 13px; border-right: 1px solid #e7e1e4; border-bottom: 1px solid #e7e1e4; }
+.testimonial-details dt { color: var(--muted); font-size: 9px; font-weight: 750; letter-spacing: .6px; text-transform: uppercase; }
+.testimonial-details dd { margin: 0; overflow-wrap: anywhere; color: var(--ink); font-size: 11px; line-height: 1.6; white-space: pre-wrap; }
+.testimonial-document-section { margin: 23px 0; }
+.testimonial-document-section h2 { margin: 0 0 9px; color: var(--ink); font-size: 13px; }
+.testimonial-subject-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px 22px; margin: 0; padding: 14px 18px 14px 32px; border: 1px solid #e7e1e4; border-radius: 5px; background: #fcfafb; color: #41383e; font-size: 10px; line-height: 1.5; }
+.testimonial-observations { margin-top: 18px; }
+.testimonial-observations .testimonial-remarks { grid-column: 1 / -1; }
+.testimonial-signature { display: grid; grid-template-columns: auto auto; align-items: end; justify-content: center; gap: 30px; margin-top: 22px; }
+.testimonial-seal-image { display: block; width: 96px; height: 96px; object-fit: contain; }
+.testimonial-signature .report-signature-line { width: 200px; }
+.testimonial-signature .report-signature-image { width: 150px; height: 100px; }
+.testimonial-document-footer { display: flex; justify-content: space-between; gap: 14px; margin-top: 36px; padding-top: 10px; border-top: 1px solid var(--line); color: #615b64; font-size: 9px; }
 .family-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
 .family-columns .family-panel { margin: 0; }
 .notice-list { display: grid; margin: 0; padding: 0; list-style: none; }
@@ -689,6 +709,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+@media (max-width: 640px) {
+  .testimonial-document { padding: 18px 14px; }
+  .testimonial-details { grid-template-columns: 1fr; }
+  .testimonial-subject-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; }
+  .testimonial-observations .testimonial-remarks { grid-column: auto; }
+  .testimonial-document-footer { flex-direction: column; }
+  .testimonial-signature { gap: 16px; }
+  .testimonial-seal-image { width: 76px; height: 76px; }
+  .testimonial-signature .report-signature-line { width: 170px; }
+}
 @media print {
   @page { margin: 7mm; }
   body.print-report * { visibility: hidden !important; }
@@ -750,4 +780,54 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
   body.print-report .report-signature,
   body.print-report .report-signature-line,
   body.print-report .report-card-footer { break-inside: avoid; page-break-inside: avoid; }
+  body.print-testimonial * { visibility: hidden !important; }
+  body.print-testimonial .testimonial-document[data-printing="true"],
+  body.print-testimonial .testimonial-document[data-printing="true"] * { visibility: visible !important; }
+  body.print-testimonial *:not(:has(.testimonial-document[data-printing="true"])):not(.testimonial-document[data-printing="true"]):not(.testimonial-document[data-printing="true"] *) {
+    display: none !important;
+  }
+  body.print-testimonial *:has(.testimonial-document[data-printing="true"]):not(.testimonial-document[data-printing="true"]) {
+    display: contents !important;
+  }
+  body.print-testimonial .testimonial-document[data-printing="true"] {
+    position: static !important;
+    display: block !important;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+    box-shadow: none;
+  }
+  body.print-testimonial .testimonial-document-heading { gap: 10px; padding: 0 0 9px; border-bottom-width: 1px; }
+  body.print-testimonial .report-school-logo { width: 60px; height: 60px; }
+  body.print-testimonial .report-school-title { gap: 3px; }
+  body.print-testimonial .report-school-title .eyebrow { font-size: 8px; }
+  body.print-testimonial .report-school-title h2 { font-size: 16px; }
+  body.print-testimonial .report-school-title > p { font-size: 10px; }
+  body.print-testimonial .testimonial-school-address { font-size: 8px !important; }
+  body.print-testimonial .testimonial-certification { margin: 18px 3px 14px; font-size: 10px; line-height: 1.7; }
+  body.print-testimonial .testimonial-details > div { gap: 3px; padding: 7px 9px; }
+  body.print-testimonial .testimonial-details dt { font-size: 7px; }
+  body.print-testimonial .testimonial-details dd { font-size: 9px; }
+  body.print-testimonial .testimonial-document-section { margin: 15px 0; }
+  body.print-testimonial .testimonial-document-section h2 { margin-bottom: 6px; font-size: 11px; }
+  body.print-testimonial .testimonial-subject-list { gap: 4px 14px; padding: 9px 14px 9px 25px; font-size: 8px; }
+  body.print-testimonial .testimonial-observations { margin-top: 12px; }
+  body.print-testimonial .testimonial-signature { margin-top: 15px; }
+  body.print-testimonial .testimonial-signature { gap: 20px; }
+  body.print-testimonial .testimonial-seal-image { width: 72px; height: 72px; }
+  body.print-testimonial .testimonial-signature .report-signature-line { width: 170px; }
+  body.print-testimonial .testimonial-signature .report-signature-image { width: 110px; height: 75px; }
+  body.print-testimonial .testimonial-signature .report-signature-line > span { padding-top: 5px; font-size: 8px; }
+  body.print-testimonial .testimonial-signature .report-signature-line strong { font-size: 9px; }
+  body.print-testimonial .testimonial-signature .report-signature-line small { font-size: 8px; }
+  body.print-testimonial .testimonial-document-footer { margin-top: 15px; padding-top: 7px; font-size: 8px; }
+  body.print-testimonial .report-card-toolbar { display: none; }
+  body.print-testimonial .testimonial-document-heading,
+  body.print-testimonial .testimonial-details,
+  body.print-testimonial .testimonial-document-section,
+  body.print-testimonial .testimonial-signature,
+  body.print-testimonial .testimonial-document-footer { break-inside: avoid; page-break-inside: avoid; }
 }

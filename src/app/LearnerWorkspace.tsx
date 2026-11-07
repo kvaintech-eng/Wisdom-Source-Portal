@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Eye,
   EyeOff,
+  FileBadge2,
   KeyRound,
   LayoutDashboard,
   LogOut,
@@ -14,7 +15,10 @@ import {
 } from 'lucide-react';
 import schoolLogo from '../assets/wisdom-source-logo.png';
 import schoolSignature from '../assets/wisdom-source-signature.png';
+import testimonialSignature from '../assets/wisdom-source-testimonial-signature.png';
+import testimonialSeal from '../assets/wisdom-source-testimonial-seal.png';
 import { formatOrdinalPosition } from '../domain/results';
+import { parseStudentTestimonialStatus, type StudentTestimonialStatus } from '../domain/testimonial';
 import { supabase } from '../lib/supabase';
 
 type StudentProfile = {
@@ -74,7 +78,12 @@ type AttendanceRecord = {
   attendance_date: string;
   status: 'present' | 'absent';
 };
-type FamilySection = 'overview' | 'results' | 'attendance' | 'timetables' | 'calendar' | 'notices' | 'security';
+type FamilySection = 'overview' | 'results' | 'attendance' | 'timetables' | 'calendar' | 'notices' | 'security' | 'testimonial';
+
+function formatSchoolDate(value: string): string {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString();
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -277,10 +286,12 @@ export default function LearnerWorkspace({
   const [calendar, setCalendar] = useState<CalendarEvent[]>([]);
   const [timetables, setTimetables] = useState<TimetableDocument[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [testimonialStatus, setTestimonialStatus] = useState<StudentTestimonialStatus | null>(null);
   const [activeSection, setActiveSection] = useState<FamilySection>('overview');
   const [openingTimetableId, setOpeningTimetableId] = useState('');
   const [timetableError, setTimetableError] = useState('');
   const [printingReportId, setPrintingReportId] = useState('');
+  const [printingTestimonial, setPrintingTestimonial] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -312,6 +323,7 @@ export default function LearnerWorkspace({
           timetablesResult,
           attendanceResult,
           activeSessionResult,
+          testimonialResult,
         ] = await Promise.all([
           supabase.from('students').select('id,serial,full_name').order('full_name'),
           supabase
@@ -346,9 +358,21 @@ export default function LearnerWorkspace({
             .select('id')
             .eq('is_active', true)
             .maybeSingle(),
+          role === 'student'
+            ? supabase.rpc('my_student_testimonial')
+            : Promise.resolve({ data: null, error: null }),
         ]);
         if (cancelled) return;
         const issues: string[] = [];
+        if (role === 'student') {
+          if (testimonialResult.error) {
+            issues.push('Your testimonial availability could not be checked.');
+          } else {
+            const parsed = parseStudentTestimonialStatus(testimonialResult.data);
+            if (!parsed) issues.push('Your testimonial information returned an unexpected response.');
+            else setTestimonialStatus(parsed);
+          }
+        }
         const linkedStudents = studentsResult.error ? [] : parseStudents(studentsResult.data);
         if (studentsResult.error) issues.push('Linked student records could not be loaded.');
 
@@ -445,11 +469,11 @@ export default function LearnerWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [refreshKey]);
+  }, [refreshKey, role]);
 
   function openSection(section: FamilySection) {
     setActiveSection(section);
-    if (section === 'results') {
+    if (section === 'results' || section === 'testimonial') {
       setIsRefreshing(true);
       setRefreshKey((current) => current + 1);
     }
@@ -471,6 +495,22 @@ export default function LearnerWorkspace({
     };
   }, [printingReportId]);
 
+  useEffect(() => {
+    if (!printingTestimonial) return undefined;
+    const clearPrintMode = () => {
+      document.body.classList.remove('print-testimonial');
+      setPrintingTestimonial(false);
+    };
+    document.body.classList.add('print-testimonial');
+    window.addEventListener('afterprint', clearPrintMode);
+    const timeout = window.setTimeout(() => window.print(), 150);
+    return () => {
+      window.clearTimeout(timeout);
+      window.removeEventListener('afterprint', clearPrintMode);
+      document.body.classList.remove('print-testimonial');
+    };
+  }, [printingTestimonial]);
+
   const studentNames = new Map(students.map((student) => [student.serial, student.full_name]));
   const navigation: { id: FamilySection; label: string; icon: typeof LayoutDashboard }[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -480,6 +520,9 @@ export default function LearnerWorkspace({
     { id: 'calendar', label: 'School calendar', icon: CalendarDays },
     { id: 'notices', label: 'School notices', icon: Bell },
     { id: 'security', label: 'Password & security', icon: KeyRound },
+    ...(role === 'student'
+      ? [{ id: 'testimonial' as const, label: 'Testimonial', icon: FileBadge2 }]
+      : []),
   ];
 
   async function submitPasswordChange(event: FormEvent<HTMLFormElement>) {
@@ -841,6 +884,119 @@ export default function LearnerWorkspace({
                 </div>
               )}
             </section>
+            </section>
+
+            <section className="family-section" hidden={activeSection !== 'testimonial'}>
+              <div className="admin-heading">
+                <span className="eyebrow">Graduation document</span>
+                <h1>Testimonial</h1>
+                <p>Approved testimonials are available here for printing or saving as a PDF.</p>
+              </div>
+              {!testimonialStatus ? (
+                <p className="form-notice" role="alert">
+                  Your testimonial availability could not be verified. Refresh the page or contact the school.
+                </p>
+              ) : !testimonialStatus.eligible ? (
+                <section className="family-panel testimonial-status-panel">
+                  <div className="family-panel-heading">
+                    <h2>Not available yet</h2>
+                    <span className="family-profile-icon"><FileBadge2 size={17} aria-hidden="true" /></span>
+                  </div>
+                  <p className="testimonial-status-message">
+                    A testimonial is available to students after the school confirms their SS 3 graduation.
+                  </p>
+                </section>
+              ) : testimonialStatus.status === 'pending' || !testimonialStatus.document ? (
+                <section className="family-panel testimonial-status-panel">
+                  <div className="family-panel-heading">
+                    <h2>Awaiting school approval</h2>
+                    <span className="family-profile-icon"><FileBadge2 size={17} aria-hidden="true" /></span>
+                  </div>
+                  <p className="testimonial-status-message">
+                    You have completed SS 3. The school is preparing your testimonial; it will appear here after it is approved.
+                  </p>
+                </section>
+              ) : (
+                <article
+                  className="testimonial-document"
+                  data-printing={printingTestimonial ? 'true' : undefined}
+                >
+                  <div className="report-card-toolbar">
+                    <span className="report-revision-label">
+                      Approved {new Date(testimonialStatus.document.issued_at).toLocaleDateString()}
+                    </span>
+                    <button
+                      className="sign-out-button report-print-button"
+                      onClick={() => setPrintingTestimonial(true)}
+                      type="button"
+                    >
+                      <Printer size={14} aria-hidden="true" />
+                      Print / Save PDF
+                    </button>
+                  </div>
+                  <header className="report-document-heading testimonial-document-heading">
+                    <img alt="Wisdom Source School logo" className="report-school-logo" src={schoolLogo} />
+                    <div className="report-school-title">
+                      <span className="eyebrow">Official school document</span>
+                      <h2>{testimonialStatus.document.school_name}</h2>
+                      {testimonialStatus.document.school_address && (
+                        <p className="testimonial-school-address">{testimonialStatus.document.school_address}</p>
+                      )}
+                      <p>Testimonial</p>
+                    </div>
+                  </header>
+                  <p className="testimonial-certification">
+                    This is to certify that <strong>{testimonialStatus.document.student_name}</strong> was a student
+                    of {testimonialStatus.document.school_name} and completed Senior Secondary 3 in the{' '}
+                    {testimonialStatus.document.graduation_session} academic session.
+                  </p>
+                  <dl className="testimonial-details">
+                    {testimonialStatus.document.former_school_name && (
+                      <div><dt>Previous school</dt><dd>{testimonialStatus.document.former_school_name}</dd></div>
+                    )}
+                    <div><dt>First enrolled</dt><dd>{formatSchoolDate(testimonialStatus.document.started_on)}</dd></div>
+                    <div><dt>Entry class</dt><dd>{testimonialStatus.document.started_class}</dd></div>
+                    <div><dt>Completed school</dt><dd>{formatSchoolDate(testimonialStatus.document.completed_on)}</dd></div>
+                    <div><dt>Graduating class</dt><dd>{testimonialStatus.document.completed_class}</dd></div>
+                    <div><dt>Graduation session</dt><dd>{testimonialStatus.document.graduation_session}</dd></div>
+                  </dl>
+                  <section className="testimonial-document-section">
+                    <h2>Subjects studied</h2>
+                    <ul className="testimonial-subject-list">
+                      {testimonialStatus.document.subjects.map((subject) => <li key={subject}>{subject}</li>)}
+                    </ul>
+                  </section>
+                  <dl className="testimonial-details testimonial-observations">
+                    <div><dt>Academic ability</dt><dd>{testimonialStatus.document.academic_ability || 'Not recorded'}</dd></div>
+                    <div><dt>Curriculum activities</dt><dd>{testimonialStatus.document.curriculum_activities || 'Not recorded'}</dd></div>
+                    <div><dt>Hobby</dt><dd>{testimonialStatus.document.hobby || 'Not recorded'}</dd></div>
+                    <div><dt>School office held</dt><dd>{testimonialStatus.document.school_office || 'Not recorded'}</dd></div>
+                    <div><dt>Club, art, or other activity</dt><dd>{testimonialStatus.document.club_art || 'Not recorded'}</dd></div>
+                    <div className="testimonial-remarks"><dt>Remarks</dt><dd>{testimonialStatus.document.remarks || 'Not recorded'}</dd></div>
+                  </dl>
+                  <div className="report-signature testimonial-signature">
+                    <img
+                      alt="Wisdom Source School certificate seal"
+                      className="testimonial-seal-image"
+                      src={testimonialSeal}
+                    />
+                    <div className="report-signature-line">
+                      <img
+                        alt="Wisdom Source School signature and stamp"
+                        className="report-signature-image"
+                        src={testimonialSignature}
+                      />
+                      <span>Authorised signature and school stamp</span>
+                      <strong>Principal / Proprietor</strong>
+                      <small>{testimonialStatus.document.school_name}</small>
+                    </div>
+                  </div>
+                  <footer className="testimonial-document-footer">
+                    <span>Approved by Wisdom Source School</span>
+                    <span>Issued {new Date(testimonialStatus.document.issued_at).toLocaleDateString()}</span>
+                  </footer>
+                </article>
+              )}
             </section>
 
             <section className="family-section" hidden={activeSection !== 'attendance'}>

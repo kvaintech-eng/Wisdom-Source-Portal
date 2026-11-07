@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CheckCheck,
   ClipboardList,
+  FileBadge2,
   LayoutDashboard,
   LogOut,
   Settings,
@@ -24,6 +25,7 @@ import SchoolUpdatesPanel from './SchoolUpdatesPanel';
 import StudentBulkImportPanel from './StudentBulkImportPanel';
 import StudentDirectoryPanel from './StudentDirectoryPanel';
 import StudentLifecyclePanel from './StudentLifecyclePanel';
+import TestimonialAdminPanel from './TestimonialAdminPanel';
 import TimetablePanel from './TimetablePanel';
 import { markUnmarkedAttendancePresent, type AttendanceStatus } from '../domain/attendance';
 import { calculateAttendancePresentDays } from '../domain/attendanceBaseline';
@@ -57,6 +59,7 @@ type AdminSection =
   | 'academics'
   | 'results'
   | 'school-day'
+  | 'testimonials'
   | 'administration';
 type AttendanceRow = {
   student_id: string;
@@ -686,6 +689,7 @@ export default function AdminWorkspace({
     { id: 'academics', label: 'Academic setup', icon: BookOpen },
     { id: 'results', label: 'Results & reports', icon: ClipboardList },
     { id: 'school-day', label: 'Timetable & updates', icon: CalendarDays },
+    { id: 'testimonials', label: 'Testimonials', icon: FileBadge2 },
     { id: 'administration', label: 'School administration', icon: Settings },
   ];
 
@@ -1283,6 +1287,15 @@ export default function AdminWorkspace({
           ) : (
             <p className="empty-state">Select an academic session, class, and term above to manage timetables and school updates.</p>
           )}
+        </section>
+
+        <section className="admin-view" hidden={activeSection !== 'testimonials'}>
+          <div className="admin-heading">
+            <span className="eyebrow">Graduation documents</span>
+            <h1>Student testimonials</h1>
+            <p>Prepare individualized testimonials for graduates and approve them before student access.</p>
+          </div>
+          <TestimonialAdminPanel />
         </section>
 
         <section className="admin-view" hidden={activeSection !== 'administration'}>
