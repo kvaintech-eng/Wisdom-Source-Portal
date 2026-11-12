@@ -918,18 +918,49 @@ export default function AdminWorkspace({
               <h1>Students & families</h1>
               <p>Create learner accounts, manage parent access, and update enrollment status.</p>
             </div>
+            <div className="student-section-jump">
+              <label>
+                <span className="field-label">Jump to a section</span>
+                <select
+                  className="text-field"
+                  defaultValue=""
+                  onChange={(event) => {
+                    const target = document.getElementById(event.target.value);
+                    if (!target) return;
+                    target.focus({ preventScroll: true });
+                    target.scrollIntoView({
+                      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+                      block: 'start',
+                    });
+                  }}
+                >
+                  <option value="" disabled>Choose a feature</option>
+                  <option value="student-directory-section">Student directory</option>
+                  <option value="stream-assignment-section">Assign existing learners to a stream</option>
+                  <option value="create-student-section">Create a student account</option>
+                  <option value="student-import-section">Import students from CSV</option>
+                  <option value="parent-account-section">Create a parent account</option>
+                  <option value="student-lifecycle-section">Promotion and archive</option>
+                </select>
+              </label>
+              <p>Choose a feature to jump directly to it.</p>
+            </div>
+            <div className="student-page-anchor" id="student-directory-section" tabIndex={-1}>
             <StudentDirectoryPanel
               classes={classes}
               refreshKey={studentOptionsRefreshKey}
               sessionId={sessionId}
-            sessionName={selectedSession?.name ?? ''}
-          />
-          <StudentStreamAssignmentPanel
-            classes={classes}
-            onAssigned={() => setStudentOptionsRefreshKey((current) => current + 1)}
-            refreshKey={studentOptionsRefreshKey}
-          />
-          <section className="family-panel provisioning-panel" aria-labelledby="provision-heading">
+              sessionName={selectedSession?.name ?? ''}
+            />
+            </div>
+            <div className="student-page-anchor" id="stream-assignment-section" tabIndex={-1}>
+              <StudentStreamAssignmentPanel
+                classes={classes}
+                onAssigned={() => setStudentOptionsRefreshKey((current) => current + 1)}
+                refreshKey={studentOptionsRefreshKey}
+              />
+            </div>
+          <section className="family-panel provisioning-panel student-page-anchor" id="create-student-section" tabIndex={-1} aria-labelledby="provision-heading">
           <div className="family-panel-heading">
             <div>
               <span className="eyebrow">New learner</span>
@@ -1033,18 +1064,24 @@ export default function AdminWorkspace({
             </>
           )}
         </section>
-        <StudentBulkImportPanel
-          classes={classes.map(({ id, name, level }) => ({ id, name, level }))}
-          onStudentCreated={() => setStudentOptionsRefreshKey((current) => current + 1)}
-          onProcessingChange={setIsBulkProvisioning}
-          sessionId={sessionId}
-          sessionName={selectedSession?.name ?? ''}
-        />
-        <ParentProvisionPanel refreshKey={studentOptionsRefreshKey} />
-        <StudentLifecyclePanel
-          onStudentListChanged={() => setStudentOptionsRefreshKey((current) => current + 1)}
-          refreshKey={studentOptionsRefreshKey}
-        />
+          <div className="student-page-anchor" id="student-import-section" tabIndex={-1}>
+            <StudentBulkImportPanel
+              classes={classes.map(({ id, name, level }) => ({ id, name, level }))}
+              onStudentCreated={() => setStudentOptionsRefreshKey((current) => current + 1)}
+              onProcessingChange={setIsBulkProvisioning}
+              sessionId={sessionId}
+              sessionName={selectedSession?.name ?? ''}
+            />
+          </div>
+          <div className="student-page-anchor" id="parent-account-section" tabIndex={-1}>
+            <ParentProvisionPanel refreshKey={studentOptionsRefreshKey} />
+          </div>
+          <div className="student-page-anchor" id="student-lifecycle-section" tabIndex={-1}>
+            <StudentLifecyclePanel
+              onStudentListChanged={() => setStudentOptionsRefreshKey((current) => current + 1)}
+              refreshKey={studentOptionsRefreshKey}
+            />
+          </div>
         </section>
 
         <section className="admin-view" hidden={activeSection !== 'attendance'}>

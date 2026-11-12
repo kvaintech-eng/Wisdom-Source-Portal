@@ -197,6 +197,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
 .reset-password-button { margin-top: 12px; }
 .results-import-panel { margin-top: 20px; }
 .student-bulk-import-panel { margin: 20px 0; }
+.student-section-jump { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 0 0 20px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.student-section-jump label { width: min(100%, 460px); }
+.student-section-jump p { margin: 0 0 12px; color: var(--muted); font-size: 11px; }
+.student-page-anchor { scroll-margin-top: 20px; }
 .student-directory-controls { display: grid; grid-template-columns: minmax(0, 1fr) 220px 220px; gap: 12px; padding: 15px 20px; border-bottom: 1px solid var(--line); background: #fcfafb; }
 .student-directory-controls > label { min-width: 0; }
 .student-directory-search { position: relative; display: flex; align-items: center; }
@@ -681,6 +685,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
   .student-bulk-controls { grid-template-columns: 1fr; }
   .student-bulk-controls .template-download { justify-content: center; }
   .student-credential-actions { align-items: stretch; flex-direction: column; }
+  .student-section-jump { align-items: stretch; flex-direction: column; gap: 8px; }
+  .student-section-jump p { margin: 0; }
   .student-directory-controls { grid-template-columns: 1fr; padding: 13px 15px; }
   .student-directory-pagination { align-items: flex-start; flex-direction: column; padding: 12px 15px; }
   .student-directory-pagination > div { width: 100%; justify-content: space-between; }
