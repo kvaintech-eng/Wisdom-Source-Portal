@@ -916,34 +916,34 @@ export default function AdminWorkspace({
             <div className="admin-heading">
               <span className="eyebrow">Student records</span>
               <h1>Students & families</h1>
+              <div className="student-section-jump">
+                <label>
+                  <span className="field-label">Go directly to a section</span>
+                  <select
+                    className="text-field"
+                    defaultValue=""
+                    onChange={(event) => {
+                      const target = document.getElementById(event.target.value);
+                      if (!target) return;
+                      target.focus({ preventScroll: true });
+                      target.scrollIntoView({
+                        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+                        block: 'start',
+                      });
+                    }}
+                  >
+                    <option value="" disabled>Choose a feature</option>
+                    <option value="student-directory-section">Student directory</option>
+                    <option value="stream-assignment-section">Assign existing learners to a stream</option>
+                    <option value="create-student-section">Create a student account</option>
+                    <option value="student-import-section">Import students from CSV</option>
+                    <option value="parent-account-section">Create a parent account</option>
+                    <option value="student-lifecycle-section">Promotion and archive</option>
+                  </select>
+                </label>
+                <p>Jump directly to the feature you need.</p>
+              </div>
               <p>Create learner accounts, manage parent access, and update enrollment status.</p>
-            </div>
-            <div className="student-section-jump">
-              <label>
-                <span className="field-label">Jump to a section</span>
-                <select
-                  className="text-field"
-                  defaultValue=""
-                  onChange={(event) => {
-                    const target = document.getElementById(event.target.value);
-                    if (!target) return;
-                    target.focus({ preventScroll: true });
-                    target.scrollIntoView({
-                      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-                      block: 'start',
-                    });
-                  }}
-                >
-                  <option value="" disabled>Choose a feature</option>
-                  <option value="student-directory-section">Student directory</option>
-                  <option value="stream-assignment-section">Assign existing learners to a stream</option>
-                  <option value="create-student-section">Create a student account</option>
-                  <option value="student-import-section">Import students from CSV</option>
-                  <option value="parent-account-section">Create a parent account</option>
-                  <option value="student-lifecycle-section">Promotion and archive</option>
-                </select>
-              </label>
-              <p>Choose a feature to jump directly to it.</p>
             </div>
             <div className="student-page-anchor" id="student-directory-section" tabIndex={-1}>
             <StudentDirectoryPanel

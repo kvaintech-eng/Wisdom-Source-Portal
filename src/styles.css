@@ -197,9 +197,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
 .reset-password-button { margin-top: 12px; }
 .results-import-panel { margin-top: 20px; }
 .student-bulk-import-panel { margin: 20px 0; }
-.student-section-jump { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 0 0 20px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.student-section-jump { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 14px 0 12px; padding: 12px 14px; border: 1px solid #e8d6db; border-left: 4px solid var(--maroon); border-radius: 8px; background: #fcf7f8; }
 .student-section-jump label { width: min(100%, 460px); }
-.student-section-jump p { margin: 0 0 12px; color: var(--muted); font-size: 11px; }
+.student-section-jump .field-label { color: var(--maroon-deep); }
+.student-section-jump .text-field { border-color: #d8bcc3; background: #fff; font-weight: 600; }
+.student-section-jump p { margin: 0 0 12px; color: #62545a; font-size: 11px; }
 .student-page-anchor { scroll-margin-top: 20px; }
 .student-directory-controls { display: grid; grid-template-columns: minmax(0, 1fr) 220px 220px; gap: 12px; padding: 15px 20px; border-bottom: 1px solid var(--line); background: #fcfafb; }
 .student-directory-controls > label { min-width: 0; }
