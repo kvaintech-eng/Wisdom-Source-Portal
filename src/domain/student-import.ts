@@ -7,12 +7,14 @@ export interface StudentImportRow {
   readonly gender: StudentGender;
   readonly classId: string;
   readonly className: string;
+  readonly stream: import('./streams').SeniorSecondaryStream | null;
   readonly recordNumber: number;
 }
 
 export interface StudentImportClass {
   readonly id: string;
   readonly name: string;
+  readonly level: string;
 }
 
 export interface StudentImportPreview {
@@ -40,11 +42,12 @@ export function previewStudentCsv(
     return { rows: [], errors: ['File must include the header and at least one student row.'] };
   }
   const header = records[0]?.map((cell) => cell.trim().toLowerCase());
-  if (!header || header.length !== 3
+  if (!header || (header.length !== 3 && header.length !== 4)
     || header[0] !== 'full_name'
     || header[1] !== 'gender'
-    || header[2] !== 'class_name') {
-    return { rows: [], errors: ['Use these columns, in order: full_name, gender, class_name.'] };
+    || header[2] !== 'class_name'
+    || (header.length === 4 && header[3] !== 'stream')) {
+    return { rows: [], errors: ['Use these columns, in order: full_name, gender, class_name, stream.'] };
   }
   if (records.length - 1 > MAX_STUDENTS_PER_IMPORT) {
     return { rows: [], errors: [`A file can contain at most ${MAX_STUDENTS_PER_IMPORT} students.`] };
@@ -58,13 +61,14 @@ export function previewStudentCsv(
   ]));
   records.slice(1).forEach((cells, index) => {
     const recordNumber = index + 2;
-    if (cells.length !== 3) {
-      errors.push(`Record ${recordNumber} must contain exactly three columns.`);
+    if (cells.length !== header.length) {
+      errors.push(`Record ${recordNumber} must contain exactly ${header.length} columns.`);
       return;
     }
     const fullName = cells[0]?.trim() ?? '';
     const genderValue = cells[1]?.trim().toLowerCase() ?? '';
     const classNameValue = cells[2]?.trim() ?? '';
+    const streamValue = cells[3]?.trim() ?? '';
     if (!fullName) {
       errors.push(`Record ${recordNumber} requires a student full name.`);
       return;
@@ -85,11 +89,27 @@ export function previewStudentCsv(
       errors.push(`Record ${recordNumber} must specify an active class configured in the school portal.`);
       return;
     }
+    let stream: StudentImportRow['stream'] = null;
+    if (schoolClass.level === 'SS') {
+      if (header.length !== 4) {
+        errors.push(`Record ${recordNumber} must include a stream for senior secondary students.`);
+        return;
+      }
+      if (streamValue !== 'Science' && streamValue !== 'Art' && streamValue !== 'Commercial') {
+        errors.push(`Record ${recordNumber} stream must be Science, Art, or Commercial.`);
+        return;
+      }
+      stream = streamValue;
+    } else if (streamValue) {
+      errors.push(`Record ${recordNumber} can only specify a stream for senior secondary students.`);
+      return;
+    }
     rows.push({
       fullName,
       gender,
       classId: schoolClass.id,
       className: schoolClass.name,
+      stream,
       recordNumber,
     });
   });

@@ -10,6 +10,7 @@ type StudentInput = {
   gender: 'female' | 'male' | 'undisclosed' | null;
   classId: string;
   sessionId: string;
+  stream: 'Science' | 'Art' | 'Commercial' | null;
 };
 
 type ParentInput = {
@@ -56,7 +57,11 @@ function validProvisionRequest(value: unknown): value is ProvisionRequest {
         || student.gender === 'male'
         || student.gender === 'undisclosed')
       && isUuid(student.classId)
-      && isUuid(student.sessionId);
+      && isUuid(student.sessionId)
+      && (student.stream === null
+        || student.stream === 'Science'
+        || student.stream === 'Art'
+        || student.stream === 'Commercial');
   }
   if (value.role === 'parent' && isRecord(value.parent)) {
     const parent = value.parent;
@@ -251,7 +256,6 @@ Deno.serve(async (request: Request) => {
     ? {
       p_actor_user_id: authData.user.id,
       p_auth_user_id: authUserId,
-      p_role: 'student',
       p_login_id: loginId,
       p_auth_email: authEmail,
       p_login_hash: await hashLoginId(loginId, loginIdHashSecret),
@@ -259,8 +263,7 @@ Deno.serve(async (request: Request) => {
       p_student_gender: body.student.gender,
       p_class_id: body.student.classId,
       p_session_id: body.student.sessionId,
-      p_parent_name: null,
-      p_parent_links: [],
+      p_stream: body.student.stream,
     }
     : {
       p_actor_user_id: authData.user.id,
@@ -281,7 +284,7 @@ Deno.serve(async (request: Request) => {
     };
 
   const { data: provisioned, error: provisionError } = await adminClient.rpc(
-    'create_school_account',
+    body.role === 'student' ? 'create_student_account_with_stream' : 'create_school_account',
     rpcParameters,
   );
   if (provisionError || !Array.isArray(provisioned) || provisioned.length !== 1) {

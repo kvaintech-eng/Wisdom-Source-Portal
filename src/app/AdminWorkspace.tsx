@@ -25,6 +25,7 @@ import SchoolUpdatesPanel from './SchoolUpdatesPanel';
 import StudentBulkImportPanel from './StudentBulkImportPanel';
 import StudentDirectoryPanel from './StudentDirectoryPanel';
 import StudentLifecyclePanel from './StudentLifecyclePanel';
+import StudentStreamAssignmentPanel from './StudentStreamAssignmentPanel';
 import TestimonialAdminPanel from './TestimonialAdminPanel';
 import TimetablePanel from './TimetablePanel';
 import { markUnmarkedAttendancePresent, type AttendanceStatus } from '../domain/attendance';
@@ -42,6 +43,7 @@ type AcademicSession = {
 type SchoolClass = {
   id: string;
   name: string;
+  level: string;
   display_order: number;
 };
 
@@ -89,6 +91,7 @@ function parseClasses(value: unknown): SchoolClass[] {
   return value.filter((row): row is SchoolClass => isRecord(row)
     && typeof row.id === 'string'
     && typeof row.name === 'string'
+    && typeof row.level === 'string'
     && typeof row.display_order === 'number');
 }
 
@@ -152,6 +155,7 @@ export default function AdminWorkspace({
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [sessionId, setSessionId] = useState('');
   const [classId, setClassId] = useState('');
+  const [stream, setStream] = useState('');
   const [termId, setTermId] = useState('');
   const [attendanceDate, setAttendanceDate] = useState(() => localDateString(new Date()));
   const [baselineCutoffDate, setBaselineCutoffDate] = useState('');
@@ -274,7 +278,7 @@ export default function AdminWorkspace({
             .order('starts_on', { ascending: false }),
           supabase
             .from('classes')
-            .select('id,name,display_order')
+            .select('id,name,level,display_order')
             .eq('active', true)
             .order('display_order'),
         ]);
@@ -393,6 +397,7 @@ export default function AdminWorkspace({
   }, [attendanceDate, classId, refreshKey, sessionId, termId]);
 
   const selectedTerm = terms.find((term) => term.id === termId);
+  const selectedClass = classes.find((schoolClass) => schoolClass.id === classId);
   const selectedTermStartsOn = selectedTerm?.starts_on;
   const selectedTermEndsOn = selectedTerm?.ends_on;
   const selectedSession = sessions.find((session) => session.id === sessionId);
@@ -630,6 +635,7 @@ export default function AdminWorkspace({
             gender: studentGender || null,
             classId,
             sessionId,
+            stream: selectedClass?.level === 'SS' ? stream || null : null,
           },
         },
       });
@@ -762,7 +768,10 @@ export default function AdminWorkspace({
               <select
                 className="text-field"
                 disabled={isLoadingOptions || classes.length === 0}
-                onChange={(event) => setClassId(event.target.value)}
+                onChange={(event) => {
+                  setClassId(event.target.value);
+                  setStream('');
+                }}
                 value={classId}
               >
                 {classes.map((schoolClass) => (
@@ -770,6 +779,23 @@ export default function AdminWorkspace({
                 ))}
               </select>
             </label>
+            {selectedClass?.level === 'SS' && (
+              <label>
+                <span className="field-label">Senior Secondary stream</span>
+                <select
+                  className="text-field"
+                  disabled={isLoadingOptions || isBulkProvisioning}
+                  onChange={(event) => setStream(event.target.value)}
+                  required
+                  value={stream}
+                >
+                  <option value="">Select stream</option>
+                  <option value="Science">Science</option>
+                  <option value="Art">Art</option>
+                  <option value="Commercial">Commercial</option>
+                </select>
+              </label>
+            )}
             <label>
               <span className="field-label">Term</span>
               <select
@@ -898,6 +924,11 @@ export default function AdminWorkspace({
               sessionId={sessionId}
             sessionName={selectedSession?.name ?? ''}
           />
+          <StudentStreamAssignmentPanel
+            classes={classes}
+            onAssigned={() => setStudentOptionsRefreshKey((current) => current + 1)}
+            refreshKey={studentOptionsRefreshKey}
+          />
           <section className="family-panel provisioning-panel" aria-labelledby="provision-heading">
           <div className="family-panel-heading">
             <div>
@@ -957,7 +988,8 @@ export default function AdminWorkspace({
                 </label>
                 <button
                   className="sign-in-button provision-button"
-                  disabled={isProvisioningStudent || !classId || !sessionId}
+                  disabled={isProvisioningStudent || !classId || !sessionId
+                    || (selectedClass?.level === 'SS' && !stream)}
                   type="submit"
                 >
                   <span>{isProvisioningStudent ? 'Creating account…' : 'Create account and enroll'}</span>
@@ -1002,7 +1034,7 @@ export default function AdminWorkspace({
           )}
         </section>
         <StudentBulkImportPanel
-          classes={classes.map(({ id, name }) => ({ id, name }))}
+          classes={classes.map(({ id, name, level }) => ({ id, name, level }))}
           onStudentCreated={() => setStudentOptionsRefreshKey((current) => current + 1)}
           onProcessingChange={setIsBulkProvisioning}
           sessionId={sessionId}
@@ -1256,13 +1288,28 @@ export default function AdminWorkspace({
             <h1>Results & reports</h1>
             <p>Configure assessments, publish marks, and review report history.</p>
           </div>
-          {classId && sessionId && termId ? (
-            <AssessmentSetupPanel classId={classId} sessionId={sessionId} termId={termId} />
+          {classId && sessionId && termId && (selectedClass?.level !== 'SS' || stream) ? (
+            <AssessmentSetupPanel
+              classId={classId}
+              isSeniorSecondary={selectedClass?.level === 'SS'}
+              sessionId={sessionId}
+              stream={selectedClass?.level === 'SS' ? stream : null}
+              termId={termId}
+            />
           ) : (
             <p className="empty-state">Select an academic session, class, and term above to manage assessments and results.</p>
           )}
-          {classId && sessionId && termId && (
-            <ResultsImportPanel classId={classId} sessionId={sessionId} termId={termId} />
+          {classId && sessionId && termId && (selectedClass?.level !== 'SS' || stream) && (
+            <ResultsImportPanel
+              classId={classId}
+              isSeniorSecondary={selectedClass?.level === 'SS'}
+              sessionId={sessionId}
+              stream={selectedClass?.level === 'SS' ? stream : null}
+              termId={termId}
+            />
+          )}
+          {selectedClass?.level === 'SS' && !stream && (
+            <p className="empty-state">Select a Senior Secondary stream to configure subjects or process results.</p>
           )}
           <ReportHistoryPanel />
         </section>

@@ -53,11 +53,15 @@ function parseAssessmentSetups(value: unknown): AssessmentSetup[] | null {
 
 export default function AssessmentSetupPanel({
   classId,
+  isSeniorSecondary,
   sessionId,
+  stream,
   termId,
 }: {
   classId: string;
+  isSeniorSecondary: boolean;
   sessionId: string;
+  stream: string | null;
   termId: string;
 }) {
   const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
@@ -83,14 +87,17 @@ export default function AssessmentSetupPanel({
       setLoading(true);
       setError('');
       try {
-        const [subjectResult, schemaResult] = await Promise.all([
-          supabase.from('subjects').select('id,name').eq('active', true).order('name'),
-          supabase
+        const schemaQuery = supabase
             .from('assessment_schemas')
-            .select('subject_id,ca_maximum,exam_maximum,version')
+            .select('subject_id,ca_maximum,exam_maximum,version,stream')
             .eq('class_id', classId)
             .eq('session_id', sessionId)
-            .eq('term_id', termId),
+            .eq('term_id', termId);
+        if (stream) schemaQuery.eq('stream', stream);
+        else schemaQuery.is('stream', null);
+        const [subjectResult, schemaResult] = await Promise.all([
+          supabase.from('subjects').select('id,name').eq('active', true).order('name'),
+          schemaQuery,
         ]);
         if (cancelled) return;
         if (subjectResult.error || schemaResult.error) {
@@ -118,7 +125,7 @@ export default function AssessmentSetupPanel({
     return () => {
       cancelled = true;
     };
-  }, [classId, refreshKey, sessionId, termId]);
+  }, [classId, refreshKey, sessionId, stream, termId]);
 
   useEffect(() => {
     const current = setups.find((setup) => setup.subjectId === subjectId);
@@ -180,6 +187,7 @@ export default function AssessmentSetupPanel({
         class_id: classId,
         session_id: sessionId,
         term_id: termId,
+        stream,
         subject_id: subjectId,
         ca_maximum: ca,
         exam_maximum: exam,
@@ -211,6 +219,7 @@ export default function AssessmentSetupPanel({
         </div>
       </div>
       <p className="provisioning-context">
+        {isSeniorSecondary ? `Configured for the ${stream} stream. ` : ''}
         Assessment settings are versioned. Updating a maximum keeps the earlier setup intact;
         future imports use the newest version.
       </p>

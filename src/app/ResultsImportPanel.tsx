@@ -25,6 +25,7 @@ interface ImportPreview {
 interface DraftContext {
   readonly classId: string;
   readonly sessionId: string;
+  readonly stream: string | null;
   readonly termId: string;
 }
 
@@ -43,8 +44,9 @@ function getImportErrorMessage(error: {
     const constraintMatch = `${error.message} ${error.details ?? ''}`
       .match(/constraint ["']?([a-z0-9_]+)["']?/i);
     const constraint = constraintMatch?.[1];
-    if (constraint?.includes('result_import_batches')
-      && constraint.includes('content_sha256')) {
+    if (constraint === 'result_import_batches_context_stream_hash_idx'
+      || (constraint?.includes('result_import_batches')
+        && constraint.includes('content_sha256'))) {
       return 'This exact results file has already been imported for the selected class and term. The transaction was rolled back. Check the saved drafts and publication history before taking further action.';
     }
     if (constraint?.includes('results_one_draft_per_enrollment_schema')) {
@@ -133,11 +135,15 @@ function sha256Hex(bytes: ArrayBuffer): Promise<string> {
 
 export default function ResultsImportPanel({
   classId,
+  isSeniorSecondary,
   sessionId,
+  stream,
   termId,
 }: {
   classId: string;
+  isSeniorSecondary: boolean;
   sessionId: string;
+  stream: string | null;
   termId: string;
 }) {
   const [file, setFile] = useState<File | null>(null);
@@ -160,7 +166,7 @@ export default function ResultsImportPanel({
     setCorrectionReason('');
     setError('');
     setMessage('');
-  }, [classId, sessionId, termId]);
+  }, [classId, sessionId, stream, termId]);
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0] ?? null;
@@ -176,6 +182,7 @@ export default function ResultsImportPanel({
   const draftContextMatchesSelection = Boolean(draftContext
     && draftContext.classId === classId
     && draftContext.sessionId === sessionId
+    && draftContext.stream === stream
     && draftContext.termId === termId);
 
   async function loadPreview() {
@@ -213,12 +220,15 @@ export default function ResultsImportPanel({
         }
       }
 
-      const { data: enrollmentData, error: enrollmentError } = await supabase
+      const enrollmentQuery = supabase
         .from('enrollments')
         .select('student_id')
         .eq('class_id', classId)
         .eq('session_id', sessionId)
         .eq('status', 'active');
+      if (stream) enrollmentQuery.eq('stream', stream);
+      else enrollmentQuery.is('stream', null);
+      const { data: enrollmentData, error: enrollmentError } = await enrollmentQuery;
       if (enrollmentError) {
         setError('The selected class enrollments could not be verified.');
         return;
@@ -233,12 +243,17 @@ export default function ResultsImportPanel({
         studentIds.length > 0
           ? supabase.from('students').select('id,serial,full_name').in('id', studentIds)
           : Promise.resolve({ data: [], error: null }),
-        supabase
-          .from('assessment_schemas')
-          .select('subject_id,ca_maximum,exam_maximum,version,subjects(id,name)')
-          .eq('class_id', classId)
-          .eq('session_id', sessionId)
-          .eq('term_id', termId),
+        (() => {
+          let assessmentQuery = supabase
+            .from('assessment_schemas')
+            .select('subject_id,ca_maximum,exam_maximum,version,subjects(id,name)')
+            .eq('class_id', classId)
+            .eq('session_id', sessionId)
+            .eq('term_id', termId);
+          if (stream) assessmentQuery = assessmentQuery.eq('stream', stream);
+          else assessmentQuery = assessmentQuery.is('stream', null);
+          return assessmentQuery;
+        })(),
       ]);
       if (studentResult.error || assessmentResult.error) {
         setError('The class roster or configured subjects could not be loaded.');
@@ -277,27 +292,31 @@ export default function ResultsImportPanel({
     setError('');
     setMessage('');
     try {
-      const { error: importError } = await supabase.rpc('save_result_drafts', {
-        p_class_id: classId,
-        p_session_id: sessionId,
-        p_term_id: termId,
-        p_file_name: preview.fileName,
-        p_sha256: preview.sha256,
-        p_rows: preview.rows.map((row) => ({
-          student_id: row.student_id,
-          subject_id: row.subject_id,
-          ca_mark: row.ca_mark,
-          exam_mark: row.exam_mark,
-        })),
-        p_confirm_replace: replaceDraftsConfirmed,
-        p_correction_reason: correctionReason.trim() || null,
-      });
+      const { error: importError } = await supabase.rpc(
+        isSeniorSecondary ? 'save_stream_result_drafts' : 'save_result_drafts',
+        {
+          p_class_id: classId,
+          p_session_id: sessionId,
+          ...(isSeniorSecondary ? { p_stream: stream } : {}),
+          p_term_id: termId,
+          p_file_name: preview.fileName,
+          p_sha256: preview.sha256,
+          p_rows: preview.rows.map((row) => ({
+            student_id: row.student_id,
+            subject_id: row.subject_id,
+            ca_mark: row.ca_mark,
+            exam_mark: row.exam_mark,
+          })),
+          p_confirm_replace: replaceDraftsConfirmed,
+          p_correction_reason: correctionReason.trim() || null,
+        },
+      );
       if (importError) {
         setError(getImportErrorMessage(importError));
         return;
       }
       setDraftsSaved(true);
-      setDraftContext({ classId, sessionId, termId });
+      setDraftContext({ classId, sessionId, stream, termId });
       setTeacherComments({});
       setMessage(`${preview.rows.length} result rows were saved as drafts. Publish only after reviewing the complete class results.`);
     } catch {
@@ -310,9 +329,9 @@ export default function ResultsImportPanel({
   async function publishResults() {
     if (!supabase || !classId || !sessionId || !termId || isPublishing) return;
     if (draftContext && !draftContextMatchesSelection) return;
-    const publicationContext = draftContext ?? { classId, sessionId, termId };
+    const publicationContext = draftContext ?? { classId, sessionId, stream, termId };
     const confirmed = window.confirm(
-      'Publish the complete class results for the selected class, session, and term? The server will verify that every active learner has marks for every configured subject. Published results are visible to students and parents and cannot be edited in place.',
+      `Publish the complete ${isSeniorSecondary ? `${stream} stream` : 'class'} results for the selected class, session, and term? The server will verify that every active learner has marks for every configured subject. Published results are visible to students and parents and cannot be edited in place.`,
     );
     if (!confirmed) return;
 
@@ -320,16 +339,20 @@ export default function ResultsImportPanel({
     setError('');
     setMessage('');
     try {
-      const { error: publishError } = await supabase.rpc('publish_class_results', {
-        p_class_id: publicationContext.classId,
-        p_session_id: publicationContext.sessionId,
-        p_term_id: publicationContext.termId,
-        p_teacher_comments: Object.fromEntries(
-          Object.entries(teacherComments)
-            .map(([studentId, comment]) => [studentId, comment.trim()])
-            .filter(([, comment]) => comment.length > 0),
-        ),
-      });
+      const { error: publishError } = await supabase.rpc(
+        isSeniorSecondary ? 'publish_stream_class_results' : 'publish_class_results',
+        {
+          p_class_id: publicationContext.classId,
+          p_session_id: publicationContext.sessionId,
+          ...(isSeniorSecondary ? { p_stream: publicationContext.stream } : {}),
+          p_term_id: publicationContext.termId,
+          p_teacher_comments: Object.fromEntries(
+            Object.entries(teacherComments)
+              .map(([studentId, comment]) => [studentId, comment.trim()])
+              .filter(([, comment]) => comment.length > 0),
+          ),
+        },
+      );
       if (publishError) {
         setError('The results were not published. Confirm every enrolled learner has a mark for each configured subject and resolve any attendance or grading issues.');
       } else {
@@ -356,6 +379,7 @@ export default function ResultsImportPanel({
         </div>
       </div>
       <p className="provisioning-context">
+        {isSeniorSecondary ? `Importing for the ${stream} stream only. ` : ''}
         CSV or the first XLSX worksheet must use columns <code>serial,subject,ca,exam</code>.
         Use exact learner serials and configured subject names. Marks are checked against each
         subject’s maximum. Optional teacher comments become part of each immutable report-card revision.
@@ -390,7 +414,8 @@ export default function ResultsImportPanel({
         </div>
       </div>
       {draftsSaved && draftContext && (draftContext.classId !== classId
-        || draftContext.sessionId !== sessionId || draftContext.termId !== termId) && (
+        || draftContext.sessionId !== sessionId || draftContext.stream !== stream
+        || draftContext.termId !== termId) && (
         <p className="form-notice" role="status">
           Drafts remain saved for the class/session/term originally selected. Publishing below will apply to that saved selection.
         </p>

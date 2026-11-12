@@ -7,6 +7,7 @@ type ClassResultFinalization = {
   class_id: string;
   session_id: string;
   term_id: string;
+  stream: string | null;
   revision: number;
   finalized_at: string;
   result_snapshot: unknown;
@@ -42,6 +43,7 @@ function parseFinalizations(value: unknown): ClassResultFinalization[] | null {
       || typeof row.class_id !== 'string'
       || typeof row.session_id !== 'string'
       || typeof row.term_id !== 'string'
+      || (row.stream !== null && typeof row.stream !== 'string')
       || typeof row.revision !== 'number'
       || typeof row.finalized_at !== 'string') {
       return null;
@@ -51,6 +53,7 @@ function parseFinalizations(value: unknown): ClassResultFinalization[] | null {
       class_id: row.class_id,
       session_id: row.session_id,
       term_id: row.term_id,
+      stream: row.stream,
       revision: row.revision,
       finalized_at: row.finalized_at,
       result_snapshot: row.result_snapshot,
@@ -139,7 +142,7 @@ export default function ReportHistoryPanel() {
       try {
         const { data, error: finalizationError } = await supabase
           .from('class_result_finalizations')
-          .select('id,class_id,session_id,term_id,revision,finalized_at,result_snapshot')
+          .select('id,class_id,session_id,term_id,stream,revision,finalized_at,result_snapshot')
           .order('finalized_at', { ascending: false })
           .limit(50);
         if (cancelled) return;
@@ -225,7 +228,8 @@ export default function ReportHistoryPanel() {
               <li key={record.id}>
                 <div className="report-history-summary">
                   <strong>
-                    {classNames.get(record.class_id) ?? 'Class'} · Revision {record.revision}
+                    {classNames.get(record.class_id) ?? 'Class'}
+                    {record.stream ? ` · ${record.stream}` : ''} · Revision {record.revision}
                   </strong>
                   <span>
                     {sessionNames.get(record.session_id) ?? 'Session'} · {termNames.get(record.term_id) ?? 'Term'}

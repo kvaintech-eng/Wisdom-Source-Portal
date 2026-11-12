@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase';
 type StudentCredential = {
   readonly fullName: string;
   readonly className: string;
+  readonly stream: string | null;
   readonly sessionName: string;
   readonly loginId: string;
   readonly temporaryPassword: string;
@@ -24,6 +25,7 @@ function downloadCredentials(credentials: readonly StudentCredential[]) {
   const json = JSON.stringify(credentials.map((credential) => ({
     student_name: credential.fullName,
     class_name: credential.className,
+    stream: credential.stream,
     academic_session: credential.sessionName,
     student_login_id: credential.loginId,
     temporary_password: credential.temporaryPassword,
@@ -49,6 +51,8 @@ export default function StudentBulkImportPanel({
   sessionId: string;
   sessionName: string;
 }) {
+  const templateClass = classes.find((schoolClass) => schoolClass.level !== 'SS') ?? classes[0];
+  const templateStream = templateClass?.level === 'SS' ? 'Science' : '';
   const [fileName, setFileName] = useState('');
   const [previewRows, setPreviewRows] = useState<readonly StudentImportRow[]>([]);
   const [previewError, setPreviewError] = useState('');
@@ -120,6 +124,7 @@ export default function StudentBulkImportPanel({
               gender: student.gender,
               classId: student.classId,
               sessionId: selectedSessionId,
+              stream: student.stream,
             },
           },
         });
@@ -138,6 +143,7 @@ export default function StudentBulkImportPanel({
         currentCredentials.push({
           fullName: student.fullName,
           className: student.className,
+          stream: student.stream,
           sessionName: selectedSessionName,
           loginId: data.loginId,
           temporaryPassword: data.temporaryPassword,
@@ -208,7 +214,7 @@ export default function StudentBulkImportPanel({
             className="sign-out-button template-download"
             download="student-import-template.csv"
             href={`data:text/csv;charset=utf-8,${encodeURIComponent(
-              `full_name,gender,class_name\nExample Student,female,${classes[0]?.name ?? 'Primary 1'}\n`,
+              `full_name,gender,class_name,stream\nExample Student,female,${templateClass?.name ?? 'Primary 1'},${templateStream}\n`,
             )}`}
           >
             <Download size={14} aria-hidden="true" />
@@ -231,7 +237,7 @@ export default function StudentBulkImportPanel({
                     <td>{student.recordNumber}</td>
                     <td>{student.fullName}</td>
                     <td>{student.gender ?? 'Not provided'}</td>
-                    <td>{student.className}</td>
+                    <td>{student.className}{student.stream ? ` · ${student.stream}` : ''}</td>
                   </tr>
                 ))}
               </tbody>
@@ -304,7 +310,7 @@ export default function StudentBulkImportPanel({
                 {credentials.map((credential) => (
                   <tr key={credential.loginId}>
                     <td>{credential.fullName}</td>
-                    <td>{credential.className}</td>
+                    <td>{credential.className}{credential.stream ? ` · ${credential.stream}` : ''}</td>
                     <td>{credential.sessionName}</td>
                     <td><code>{credential.loginId}</code></td>
                     <td><code>{credential.temporaryPassword}</code></td>
@@ -334,7 +340,8 @@ export default function StudentBulkImportPanel({
       )}
       {!fileName && !previewError && !credentials.length && (
         <p className="attendance-history-note">
-          CSV columns: <code>full_name,gender,class_name</code>. Gender may be blank or one of female, male, undisclosed.
+          CSV columns: <code>full_name,gender,class_name,stream</code>. Gender may be blank or one of female, male, undisclosed.
+          Senior Secondary students must use Science, Art, or Commercial; leave stream blank for other classes.
           Class names must match an active class configured in the portal. The selected academic session applies to all rows.
           No accounts are created until you review the preview and confirm.
         </p>

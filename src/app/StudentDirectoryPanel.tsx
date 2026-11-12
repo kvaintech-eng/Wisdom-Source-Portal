@@ -10,6 +10,7 @@ type StudentDirectoryRecord = {
   gender: string | null;
   classId: string;
   className: string;
+  stream: string | null;
   isActive: boolean;
   authUserId: string | null;
   enrollmentStatus: EnrollmentStatus;
@@ -54,7 +55,7 @@ export default function StudentDirectoryPanel({
       try {
         const { data: enrollmentData, error: enrollmentError } = await supabase
           .from('enrollments')
-          .select('student_id,status,class_id')
+          .select('student_id,status,class_id,stream')
           .eq('session_id', sessionId)
           .order('student_id');
         if (cancelled) return;
@@ -66,8 +67,9 @@ export default function StudentDirectoryPanel({
           isRecord(row)
           && typeof row.student_id === 'string'
           && typeof row.class_id === 'string'
+          && (row.stream === null || typeof row.stream === 'string')
           && (row.status === 'active' || row.status === 'withdrawn' || row.status === 'completed')
-            ? [{ studentId: row.student_id, classId: row.class_id, status: row.status }]
+            ? [{ studentId: row.student_id, classId: row.class_id, stream: row.stream, status: row.status }]
             : []
         ));
         if (enrollments.length !== enrollmentData.length) {
@@ -139,7 +141,7 @@ export default function StudentDirectoryPanel({
 
         const enrollmentByStudent = new Map(enrollments.map((enrollment) => [
           enrollment.studentId,
-          { classId: enrollment.classId, status: enrollment.status },
+          { classId: enrollment.classId, stream: enrollment.stream, status: enrollment.status },
         ]));
         const classNames = new Map(classes.map((schoolClass) => [
           schoolClass.id,
@@ -152,6 +154,7 @@ export default function StudentDirectoryPanel({
             ...student,
             classId: enrollment.classId,
             className: classNames.get(enrollment.classId) ?? 'Unavailable class',
+            stream: enrollment.stream,
             enrollmentStatus: enrollment.status,
             accountActive: student.authUserId !== null
               && accountStatuses.get(student.authUserId) === true,
@@ -263,7 +266,7 @@ export default function StudentDirectoryPanel({
               <tr>
                 <th scope="col">Student</th>
                 <th scope="col">Serial</th>
-                <th scope="col">Class</th>
+                <th scope="col">Class / stream</th>
                 <th scope="col">Enrollment</th>
                 <th scope="col">Account</th>
               </tr>
@@ -276,7 +279,7 @@ export default function StudentDirectoryPanel({
                     {student.gender && <small>{student.gender}</small>}
                   </td>
                   <td><code>{student.serial}</code></td>
-                  <td>{student.className}</td>
+                  <td>{student.className}{student.stream ? ` · ${student.stream}` : ''}</td>
                   <td>
                     <span className={`directory-status directory-status-${student.isActive ? student.enrollmentStatus : 'archived'}`}>
                       {student.isActive

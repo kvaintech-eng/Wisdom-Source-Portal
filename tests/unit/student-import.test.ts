@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { previewStudentCsv } from '../../src/domain/student-import';
 
 const classes = [
-  { id: 'class-primary-1', name: 'Primary 1' },
-  { id: 'class-ss-1', name: 'SS 1' },
+  { id: 'class-primary-1', name: 'Primary 1', level: 'Primary' },
+  { id: 'class-ss-1', name: 'SS 1', level: 'SS' },
 ];
 
 describe('previewStudentCsv', () => {
   it('accepts configured classes, optional genders, and a UTF-8 BOM', () => {
     expect(previewStudentCsv(
-      '\uFEFFfull_name,gender,class_name\r\n"Alex, Example",female,primary 1\r\nTaylor,,SS 1',
+      '\uFEFFfull_name,gender,class_name,stream\r\n"Alex, Example",female,primary 1,\r\nTaylor,,SS 1,Science',
       classes,
     )).toEqual({
       rows: [
@@ -18,6 +18,7 @@ describe('previewStudentCsv', () => {
           gender: 'female',
           classId: 'class-primary-1',
           className: 'Primary 1',
+          stream: null,
           recordNumber: 2,
         },
         {
@@ -25,6 +26,7 @@ describe('previewStudentCsv', () => {
           gender: null,
           classId: 'class-ss-1',
           className: 'SS 1',
+          stream: 'Science',
           recordNumber: 3,
         },
       ],
@@ -36,16 +38,16 @@ describe('previewStudentCsv', () => {
     expect(previewStudentCsv('full_name,gender,class_name', classes).errors)
       .toContain('File must include the header and at least one student row.');
     expect(previewStudentCsv('name,gender,class_name\nAlex,female,Primary 1', classes).errors)
-      .toContain('Use these columns, in order: full_name, gender, class_name.');
+      .toContain('Use these columns, in order: full_name, gender, class_name, stream.');
   });
 
   it('rejects malformed row shapes, blank names, long names, and invalid genders', () => {
     const preview = previewStudentCsv([
-      'full_name,gender,class_name',
-      ',female,Primary 1',
-      `${'A'.repeat(161)},male,Primary 1`,
-      'Alex,unknown,Primary 1',
-      'Taylor,female,Primary 1,extra',
+      'full_name,gender,class_name,stream',
+      ',female,Primary 1,',
+      `${'A'.repeat(161)},male,Primary 1,`,
+      'Alex,unknown,Primary 1,',
+      'Taylor,female,Primary 1,,extra',
     ].join('\n'), classes);
     expect(preview.rows).toEqual([]);
     expect(preview.errors).toHaveLength(4);
@@ -67,5 +69,20 @@ describe('previewStudentCsv', () => {
       rows: [],
       errors: ['A file can contain at most 100 students.'],
     });
+  });
+
+  it('requires a valid stream for senior secondary students and rejects streams elsewhere', () => {
+    expect(previewStudentCsv(
+      'full_name,gender,class_name,stream\nAlex,,SS 1,',
+      classes,
+    ).errors).toContain('Record 2 stream must be Science, Art, or Commercial.');
+    expect(previewStudentCsv(
+      'full_name,gender,class_name,stream\nAlex,,Primary 1,Science',
+      classes,
+    ).errors).toContain('Record 2 can only specify a stream for senior secondary students.');
+    expect(previewStudentCsv(
+      'full_name,gender,class_name\nAlex,,SS 1',
+      classes,
+    ).errors).toContain('Record 2 must include a stream for senior secondary students.');
   });
 });
