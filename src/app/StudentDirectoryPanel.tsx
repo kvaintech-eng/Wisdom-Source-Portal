@@ -19,6 +19,9 @@ type StudentDirectoryRecord = {
 type DirectoryFilter = 'all' | 'active' | 'archived' | 'no-account';
 type DirectoryClass = { id: string; name: string };
 
+const DIRECTORY_PAGE_SIZE = 25;
+const DIRECTORY_QUERY_SIZE = 500;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -38,6 +41,7 @@ export default function StudentDirectoryPanel({
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<DirectoryFilter>('all');
   const [classFilter, setClassFilter] = useState('all');
+  const [page, setPage] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -53,17 +57,28 @@ export default function StudentDirectoryPanel({
       setError('');
       setStudents([]);
       try {
-        const { data: enrollmentData, error: enrollmentError } = await supabase
-          .from('enrollments')
-          .select('student_id,status,class_id,stream')
-          .eq('session_id', sessionId)
-          .order('student_id');
-        if (cancelled) return;
-        if (enrollmentError || !Array.isArray(enrollmentData)) {
-          setError('The selected class enrollment list could not be loaded.');
-          return;
+        const enrollmentData: unknown[] = [];
+        for (let offset = 0; ; offset += DIRECTORY_QUERY_SIZE) {
+          const { data, error: enrollmentError } = await supabase
+            .from('enrollments')
+            .select('student_id,status,class_id,stream')
+            .eq('session_id', sessionId)
+            .order('student_id')
+            .range(offset, offset + DIRECTORY_QUERY_SIZE - 1);
+          if (cancelled) return;
+          if (enrollmentError || !Array.isArray(data)) {
+            setError('The selected class enrollment list could not be loaded.');
+            return;
+          }
+          enrollmentData.push(...data);
+          if (data.length < DIRECTORY_QUERY_SIZE) break;
         }
-        const enrollments = enrollmentData.flatMap((row) => (
+        const enrollments: {
+          studentId: string;
+          classId: string;
+          stream: string | null;
+          status: EnrollmentStatus;
+        }[] = enrollmentData.flatMap((row) => (
           isRecord(row)
           && typeof row.student_id === 'string'
           && typeof row.class_id === 'string'
@@ -81,16 +96,20 @@ export default function StudentDirectoryPanel({
           return;
         }
 
-        const studentIds = enrollments.map((enrollment) => enrollment.studentId);
-        const { data: studentData, error: studentError } = await supabase
-          .from('students')
-          .select('id,serial,full_name,gender,active,auth_user_id')
-          .in('id', studentIds)
-          .order('full_name');
-        if (cancelled) return;
-        if (studentError || !Array.isArray(studentData)) {
-          setError('Student details for the selected session could not be loaded.');
-          return;
+        const studentIds = [...new Set(enrollments.map((enrollment) => enrollment.studentId))];
+        const studentData: unknown[] = [];
+        for (let offset = 0; offset < studentIds.length; offset += DIRECTORY_QUERY_SIZE) {
+          const { data, error: studentError } = await supabase
+            .from('students')
+            .select('id,serial,full_name,gender,active,auth_user_id')
+            .in('id', studentIds.slice(offset, offset + DIRECTORY_QUERY_SIZE))
+            .order('full_name');
+          if (cancelled) return;
+          if (studentError || !Array.isArray(data)) {
+            setError('Student details for the selected session could not be loaded.');
+            return;
+          }
+          studentData.push(...data);
         }
         const parsedStudents = studentData.flatMap((row) => (
           isRecord(row)
@@ -139,7 +158,11 @@ export default function StudentDirectoryPanel({
           }
         }
 
-        const enrollmentByStudent = new Map(enrollments.map((enrollment) => [
+        const enrollmentByStudent = new Map<string, {
+          classId: string;
+          stream: string | null;
+          status: EnrollmentStatus;
+        }>(enrollments.map((enrollment) => [
           enrollment.studentId,
           { classId: enrollment.classId, stream: enrollment.stream, status: enrollment.status },
         ]));
@@ -147,7 +170,7 @@ export default function StudentDirectoryPanel({
           schoolClass.id,
           schoolClass.name,
         ]));
-        setStudents(parsedStudents.flatMap((student) => {
+        const directoryStudents = parsedStudents.flatMap((student) => {
           const enrollment = enrollmentByStudent.get(student.id);
           if (!enrollment) return [];
           return [{
@@ -159,7 +182,11 @@ export default function StudentDirectoryPanel({
             accountActive: student.authUserId !== null
               && accountStatuses.get(student.authUserId) === true,
           }];
-        }));
+        });
+        directoryStudents.sort((left, right) =>
+          left.fullName.localeCompare(right.fullName)
+          || left.serial.localeCompare(right.serial));
+        setStudents(directoryStudents);
       } catch {
         if (!cancelled) setError('The student directory could not be loaded. Check your connection and try again.');
       } finally {
@@ -171,6 +198,10 @@ export default function StudentDirectoryPanel({
       cancelled = true;
     };
   }, [classes, sessionId, refreshKey]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [sessionId]);
 
   const visibleStudents = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase();
@@ -187,6 +218,16 @@ export default function StudentDirectoryPanel({
       return matchesSearch && matchesFilter && matchesClass;
     });
   }, [classFilter, filter, search, students]);
+
+  const pageCount = Math.ceil(visibleStudents.length / DIRECTORY_PAGE_SIZE);
+  const currentPage = Math.min(page, Math.max(0, pageCount - 1));
+  const firstVisibleIndex = currentPage * DIRECTORY_PAGE_SIZE;
+  const pageStudents = visibleStudents.slice(
+    firstVisibleIndex,
+    firstVisibleIndex + DIRECTORY_PAGE_SIZE,
+  );
+  const firstVisibleStudent = visibleStudents.length === 0 ? 0 : firstVisibleIndex + 1;
+  const lastVisibleStudent = Math.min(firstVisibleIndex + DIRECTORY_PAGE_SIZE, visibleStudents.length);
 
   return (
     <section className="family-panel student-directory-panel" aria-labelledby="student-directory-heading">
@@ -210,7 +251,10 @@ export default function StudentDirectoryPanel({
           <input
             aria-label="Search students by name or serial"
             className="text-field"
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(0);
+            }}
             placeholder="Search name or student serial"
             type="search"
             value={search}
@@ -225,6 +269,7 @@ export default function StudentDirectoryPanel({
               const value = event.target.value;
               if (value === 'all' || value === 'active' || value === 'archived' || value === 'no-account') {
                 setFilter(value);
+                setPage(0);
               }
             }}
             value={filter}
@@ -240,7 +285,10 @@ export default function StudentDirectoryPanel({
           <select
             aria-label="Filter by class"
             className="text-field"
-            onChange={(event) => setClassFilter(event.target.value)}
+            onChange={(event) => {
+              setClassFilter(event.target.value);
+              setPage(0);
+            }}
             value={classFilter}
           >
             <option value="all">All classes</option>
@@ -272,7 +320,7 @@ export default function StudentDirectoryPanel({
               </tr>
             </thead>
             <tbody>
-              {visibleStudents.map((student) => (
+              {pageStudents.map((student) => (
                 <tr key={student.id}>
                   <td>
                     <strong>{student.fullName}</strong>
@@ -297,6 +345,32 @@ export default function StudentDirectoryPanel({
             </tbody>
           </table>
         </div>
+      )}
+      {!isLoading && visibleStudents.length > 0 && (
+        <nav className="student-directory-pagination" aria-label="Student directory pages">
+          <span>
+            Showing {firstVisibleStudent}–{lastVisibleStudent} of {visibleStudents.length} learners
+          </span>
+          <div>
+            <button
+              className="sign-out-button"
+              disabled={currentPage === 0}
+              onClick={() => setPage((current) => Math.max(0, current - 1))}
+              type="button"
+            >
+              Previous
+            </button>
+            <span aria-live="polite">Page {currentPage + 1} of {pageCount}</span>
+            <button
+              className="sign-out-button"
+              disabled={currentPage >= pageCount - 1}
+              onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))}
+              type="button"
+            >
+              Next
+            </button>
+          </div>
+        </nav>
       )}
     </section>
   );

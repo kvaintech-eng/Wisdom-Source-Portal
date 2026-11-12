@@ -207,6 +207,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
 .student-directory-table-wrap td:first-child strong, .student-directory-table-wrap td:first-child small { display: block; }
 .student-directory-table-wrap td:first-child small { margin-top: 4px; color: var(--muted); font-size: 10px; text-transform: capitalize; }
 .student-directory-table-wrap code { font-size: 10px; }
+.student-directory-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--line); }
+.student-directory-pagination > span, .student-directory-pagination > div > span { color: var(--muted); font-size: 10px; }
+.student-directory-pagination > div { display: flex; align-items: center; gap: 10px; }
 .directory-status { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 100px; background: #f3f0f2; color: #625b65; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .directory-status-active { background: #edf7ef; color: #2d6840; }
 .directory-status-withdrawn, .directory-status-archived, .directory-status-inactive { background: #fff0ef; color: #9b3d38; }
@@ -679,6 +682,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #d9aeb8; outline-
   .student-bulk-controls .template-download { justify-content: center; }
   .student-credential-actions { align-items: stretch; flex-direction: column; }
   .student-directory-controls { grid-template-columns: 1fr; padding: 13px 15px; }
+  .student-directory-pagination { align-items: flex-start; flex-direction: column; padding: 12px 15px; }
+  .student-directory-pagination > div { width: 100%; justify-content: space-between; }
   .results-import-controls { grid-template-columns: 1fr; }
   .assessment-setup-form { grid-template-columns: 1fr 1fr; }
   .assessment-save-button { width: 100%; }
